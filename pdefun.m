@@ -4,7 +4,8 @@ function [ c, f, s ] = pdefun( x, t, u, dudx )
 % constants
 diffusion_constant = 1;
 RT = 1;
-
+delta_G_standard = [ 0 ];
+rate_constant = 1;
 
 [dummy, n] = size(u);
 
@@ -19,9 +20,9 @@ s = zeros(1, n);
 for substrate = 1: n - 1
     for product = substrate + 1: n
         % rate of substrate -> product
-        rate = delta_G_standard(substrate, product) + RT * log(u(product) / u(substrate))
-        s(substrate) = s(substrate) + rate
-        s(product) = s(product) - rate
+        rate = rate_constant * (delta_G_standard(substrate, product) + RT * log(u(product) / u(substrate)));
+        s(substrate) = s(substrate) + rate;
+        s(product) = s(product) - rate;
     end
 end
     
