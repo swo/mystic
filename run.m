@@ -1,7 +1,7 @@
-function [] = run_all()
+function [sol] = run_all()
 
 % constants
-diffusion_constant = 1;
+diffusion_constant = 0.1;
 RT = 1;
 delta_G_standard = [ 0 ];
 rate_constant = 1;
@@ -14,13 +14,7 @@ t_resolution = 100;
 
 % initial conditions
 function [u] = icfun(x)
-    for i = 1: size(x)
-        if 4 < x(i) < 6
-            u(i) = 1;
-        else
-            u(i) = 0;
-        end
-    end
+    u = sin(x) .^ 2;
 end
 
 % boundary conditions
