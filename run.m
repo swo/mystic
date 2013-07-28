@@ -1,9 +1,9 @@
 function [sol] = run_all()
 
 % constants
-diffusion_constant = 0.1;
+diffusion_constant = 10;
 RT = 2.49; % kJ mol^-1; T = 300 K
-rate_constant = 1;
+rate_constant = 1e-3;
 
 % simulation parameters
 x_max = 10;
@@ -17,13 +17,12 @@ minimum_concentration = 1e-7;
 % map 's' to link them to integers. these integers will be their position
 % in the reaction matrices, etc.
 species = {
-    %'OH-',
-    %'O(0)',
-    %'Fe(III)',
-    %'Fe(II)',
-    %'S(VI)',
-    %'S(-II)'
-    'A', 'a', 'B', 'b'
+    'OH-',
+    'O(0)',
+    'Fe(III)',
+    'Fe(II)'
+    %%'S(VI)',
+    %%'S(-II)'
 };
 n_species = length(species);
 s = containers.Map(species, 1: n_species);
@@ -32,33 +31,27 @@ s = containers.Map(species, 1: n_species);
 % rows are: (species) + (# electrons) -> (species) with (standard electrode potential)
 half_reactions = [
     % oxygen
-    %s('O(0)')       s('OH-')    2      0.82  % Brock
+    s('O(0)')       s('OH-')    2      0.82  % Brock
 
     % carbon
     
     % sulfur
-    %s('S(VI)')      s('S(-II)') 8     0.299   % ?
+    %%s('S(VI)')      s('S(-II)') 8     0.299   % ?
     
     % iron
-    %s('Fe(III)')    s('Fe(II)') 1     0.769 % wikipedia table
+    s('Fe(III)')    s('Fe(II)') 1     0.769 % wikipedia table
     
     % nitrogen
-    
-    % test
-    s('A') s('a') 1 0.0
-    s('B') s('b') 1 10.0
     
 ];
 
 % initial conditions
 function [u] = icfun(x)
-    %u = repmat(minimum_concentration, n_species, 1);
+    u = repmat(minimum_concentration, n_species, 1);
     
-    u = [1.0 0.001 0.001 0.5];
-    
-    %u(s('OH-')) = 1e-7;
-    %u(s('O(0)')) = exp(-x);
-    %u(s('Fe(II)')) = exp(-(x_max - x));
+    u(s('OH-')) = 1e-7;
+    u(s('O(0)')) = exp(-x);
+    u(s('Fe(II)')) = exp(-(x_max - x));
 end
 
 % boundary conditions
@@ -87,12 +80,14 @@ function [so] = source(u)
     
     % loop over every pair of half-reactions
     for i = 1: n_half_reactions - 1
-        rxn1_reac_i = half_reactions(i, 1);
-        rxn1_reac = u(rxn1_reac_i);
-        rxn1_prod_i = half_reactions(i, 2);
-        rxn1_prod = u(rxn1_prod_i);
-        
         for j = i + 1: n_half_reactions
+            % assign all these pointers inside the inner loop so they can
+            % be reassigned for reversed reactions
+            rxn1_reac_i = half_reactions(i, 1);
+            rxn1_reac = u(rxn1_reac_i);
+            rxn1_prod_i = half_reactions(i, 2);
+            rxn1_prod = u(rxn1_prod_i);
+            
             rxn2_reac_i = half_reactions(j, 1);
             rxn2_reac = u(rxn2_reac_i);
             rxn2_prod_i = half_reactions(j, 2);
@@ -110,8 +105,9 @@ function [so] = source(u)
             % going forward (is a reduction) and rxn2 is going backwards (ie is an
             % oxidation)
             ln_Q = log(rxn1_prod) - log(rxn1_reac) + coeff * (log(rxn2_reac) - log(rxn2_prod));
-            if imag(ln_Q) > 0
-                [rxn1_prod rxn1_reac coeff rxn2_reac rxn2_prod]
+            if imag(ln_Q) ~= 0
+                [species(rxn1_prod_i) species(rxn1_reac_i) 'coeff' species(rxn2_reac_i) species(rxn2_prod_i)]
+                [rxn1_prod rxn1_reac coeff rxn2_reac rxn2_prod i j]
             end
             assert(imag(ln_Q) == 0)
             
@@ -139,6 +135,7 @@ function [so] = source(u)
 
             % reaction is going forward
             rxn1_rate = -rate_constant * rxn1_reac * (rxn2_prod ^ coeff) * delta_G;
+            ['rate' species(rxn1_reac_i) rxn1_reac species(rxn2_prod_i) rxn2_prod coeff delta_G '=' rxn1_rate];
             if rxn1_rate < 0
                 [rate_constant rxn1_reac rxn2_prod coeff delta_G]
             end
@@ -150,16 +147,20 @@ function [so] = source(u)
             so(rxn1_prod_i) = so(rxn1_prod_i) + rxn1_rate;
 
             % second half-reaction goes backward
-            so(rxn2_reac_i) = so(rxn1_reac_i) + rxn2_rate;
-            so(rxn2_prod_i) = so(rxn1_prod_i) - rxn2_rate;
+            so(rxn2_reac_i) = so(rxn2_reac_i) + rxn2_rate;
+            so(rxn2_prod_i) = so(rxn2_prod_i) - rxn2_rate;
         end
     end
+    
+    % check that everything went somewhere
+    assert(sum(so) == 0)
 end
 
 
 
 % -- function for computing the instantaneous differential equations --
 function [c, f, so] = pdefun(x, t, u, dudx)
+    u
     
     % coupling constant is 1 for each species
     c = ones(n_species, 1);
@@ -171,7 +172,7 @@ function [c, f, so] = pdefun(x, t, u, dudx)
     so = source(u);
     
     % ignore any changes to hydroxide concentration
-    %so(s('OH-')) = 0;
+    so(s('OH-')) = 0;
     
     % check that all the concentrations are positive
     if min(u) < 0
