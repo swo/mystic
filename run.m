@@ -8,7 +8,7 @@ rate_constant = 1e-3;
 % simulation parameters
 x_max = 10;
 x_resolution = 10;
-t_max = 0.1;
+t_max = 10;
 t_resolution = 20;
 minimum_concentration = 1e-7;
 
@@ -50,8 +50,10 @@ function [u] = icfun(x)
     u = repmat(minimum_concentration, n_species, 1);
     
     u(s('OH-')) = 1e-7;
-    u(s('O(0)')) = exp(-x);
-    u(s('Fe(II)')) = exp(-(x_max - x));
+    u(s('O(0)')) = exp(-x / 2);
+    %u(s('O(0)')) = 1.0;
+    %u(s('Fe(II)')) = exp(-(x_max - x));
+    u(s('Fe(II)')) = 0.1;
 end
 
 % boundary conditions
@@ -119,9 +121,6 @@ function [so] = source(u)
                 % swap delta G
                 delta_G = -delta_G;
 
-                % define a swap function
-                swap = @(varargin) varargin{nargin:-1:1};
-
                 % swap the indices
                 [rxn1_reac_i, rxn1_prod_i] = swap(rxn1_reac_i, rxn1_prod_i);
                 [rxn2_reac_i, rxn2_prod_i] = swap(rxn2_reac_i, rxn2_prod_i);
@@ -160,7 +159,6 @@ end
 
 % -- function for computing the instantaneous differential equations --
 function [c, f, so] = pdefun(x, t, u, dudx)
-    u
     
     % coupling constant is 1 for each species
     c = ones(n_species, 1);
