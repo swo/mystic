@@ -3,8 +3,8 @@ sol = run();
 clf;
 
 hold on;
-for i = [2 3 4]
+for i = [2 6 7]
     surf(sol(:, :, i))
 end
-set(gca, 'ZScale', 'log');
+%set(gca, 'ZScale', 'log');
 hold off;

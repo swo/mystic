@@ -1,4 +1,4 @@
-function [ a b ] = swap( x y )
+function [a b] = swap(x, y)
 %SWAP swaps two variables
     a = y;
     b = x;

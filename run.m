@@ -7,14 +7,18 @@
 function [sol] = run_all()
 
 % constants
-diffusion_constant = 10;
+diffusion_constant = 0.01;
 RT = 2.49; % 8.3 J K^-1 mol^-1 * 300 K = 2.49 kJ mol^-1
-rate_constant = 1e-3;
+rate_constant = 1.0;
+
+% assertive parameters
+photo_depth_scale = 2.0; % 1/e distance for photosynthesis (meters)
+photo_rate_constant = 10.0; % convert CO2 concentration and photon density to rate
 
 % simulation parameters
 x_max = 10;
 x_resolution = 10;
-t_max = 1000;
+t_max = 10;
 t_resolution = 20;
 minimum_concentration = 1e-7;
 
@@ -26,7 +30,10 @@ species = {
     'OH-',
     'O(0)',
     'Fe(III)',
-    'Fe(II)'
+    'Fe(II)',
+    'C(-IV)',
+    'C(0)',
+    'C(IV)'
     %%'S(VI)',
     %%'S(-II)'
 };
@@ -37,9 +44,11 @@ s = containers.Map(species, 1: n_species);
 % rows are: (species) + (# electrons) -> (species) with (standard electrode potential)
 half_reactions = [
     % oxygen
-    s('O(0)')       s('OH-')    2      0.82  % Brock
+    s('O(0)')       s('OH-')    2       0.820  % reduction of oxygen; Brock
 
     % carbon
+    s('C(IV)')      s('C(0)')   4      -0.071 % opposite of fermentation
+    s('C(IV)')      s('C(-IV)') 8       0.170 % methanogenesis
     
     % sulfur
     %%s('S(VI)')      s('S(-II)') 8     0.299   % ?
@@ -57,9 +66,10 @@ function [u] = icfun(x)
     
     u(s('OH-')) = 1e-7;
     %u(s('O(0)')) = exp(-x);
-    u(s('O(0)')) = 1.0;
+    %u(s('O(0)')) = 0.1;
     %u(s('Fe(II)')) = exp(-(x_max - x));
-    u(s('Fe(II)')) = 1.0;
+    u(s('Fe(II)')) = 0.1;
+    u(s('C(IV)')) = 0.3;
 end
 
 % boundary conditions
@@ -82,9 +92,16 @@ half_reactions(:, 4) = -faraday_constant * half_reactions(:, 3) .* half_reaction
 % keep track of the number of half reactions
 n_half_reactions = n_rows(half_reactions);
 
-function [so] = source(u)
+function [so] = source(x, u)
     %SOURCE compute the fluxes from the concentration vector u
     so = zeros(1, length(u));
+    
+    % special case: photosynthesis consumes oxidized carbon (CO2) and
+    % produces C(0) (glucose, carbohydrates) and oxidized oxygen (O2)
+    photo_rate = photo_rate_constant * exp(-x / photo_depth_scale) * u(s('C(IV)'));
+    so(s('C(IV)')) = so(s('C(IV)')) - photo_rate;
+    so(s('C(0)')) = so(s('C(0)')) + photo_rate;
+    so(s('O(0)')) = so(s('O(0)')) + photo_rate;
     
     % loop over every pair of half-reactions
     for i = 1: n_half_reactions - 1
@@ -136,10 +153,6 @@ function [so] = source(u)
 
             % reaction is going forward
             rxn1_rate = -rate_constant * rxn1_reac * (rxn2_prod ^ coeff) * delta_G;
-            ['rate' species(rxn1_reac_i) rxn1_reac species(rxn2_prod_i) rxn2_prod coeff delta_G '=' rxn1_rate];
-            if rxn1_rate < 0
-                [rate_constant rxn1_reac rxn2_prod coeff delta_G]
-            end
             assert(rxn1_rate > 0)
             rxn2_rate = coeff * rxn1_rate;
             
@@ -154,13 +167,19 @@ function [so] = source(u)
     end
     
     % check that everything went somewhere
-    assert(sum(so) == 0)
+    % but we pull O2 from nowhere using photosynthesis!
+    %%assert(sum(so) == 0)
 end
 
 
 
 % -- function for computing the instantaneous differential equations --
 function [c, f, so] = pdefun(x, t, u, dudx)
+    % check that all the concentrations are positive
+    if min(u) < 0
+        {'t' t 'u' u}
+    end
+    assert(min(u) >= 0)
     
     % coupling constant is 1 for each species
     c = ones(n_species, 1);
@@ -169,24 +188,14 @@ function [c, f, so] = pdefun(x, t, u, dudx)
     f = diffusion_constant * dudx;
 
     % compute the source terms from the previously defined function
-    so = source(u);
+    so = source(x, u);
     
     % ignore any changes to hydroxide concentration
     so(s('OH-')) = 0;
-    
-    % check that all the concentrations are positive
-    if min(u) < 0
-        'holy shit'
-        [v, i] = min(u)
-        species(i)
-        u
-        so
-    end
-    assert(min(u) >= 0)
 end
 
 m = 1;
-options = odeset('AbsTol', 1e-2 * minimum_concentration);
+options = odeset('AbsTol', 1e-2 * minimum_concentration, 'MaxStep', 0.1);
 sol = pdepe(m, @pdefun, @icfun, @bcfun, xmesh, tspan, options);
 
 end
