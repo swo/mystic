@@ -1,14 +1,20 @@
+% todo:
+% add an oxygen production term: oxygen can only be produced near the
+% surface, but it requires carbon species that flow from the top
+
+% think again about the carbon cycle
+
 function [sol] = run_all()
 
 % constants
 diffusion_constant = 10;
-RT = 2.49; % kJ mol^-1; T = 300 K
+RT = 2.49; % 8.3 J K^-1 mol^-1 * 300 K = 2.49 kJ mol^-1
 rate_constant = 1e-3;
 
 % simulation parameters
 x_max = 10;
 x_resolution = 10;
-t_max = 10;
+t_max = 1000;
 t_resolution = 20;
 minimum_concentration = 1e-7;
 
@@ -50,10 +56,10 @@ function [u] = icfun(x)
     u = repmat(minimum_concentration, n_species, 1);
     
     u(s('OH-')) = 1e-7;
-    u(s('O(0)')) = exp(-x / 2);
-    %u(s('O(0)')) = 1.0;
+    %u(s('O(0)')) = exp(-x);
+    u(s('O(0)')) = 1.0;
     %u(s('Fe(II)')) = exp(-(x_max - x));
-    u(s('Fe(II)')) = 0.1;
+    u(s('Fe(II)')) = 1.0;
 end
 
 % boundary conditions
@@ -107,14 +113,10 @@ function [so] = source(u)
             % going forward (is a reduction) and rxn2 is going backwards (ie is an
             % oxidation)
             ln_Q = log(rxn1_prod) - log(rxn1_reac) + coeff * (log(rxn2_reac) - log(rxn2_prod));
-            if imag(ln_Q) ~= 0
-                [species(rxn1_prod_i) species(rxn1_reac_i) 'coeff' species(rxn2_reac_i) species(rxn2_prod_i)]
-                [rxn1_prod rxn1_reac coeff rxn2_reac rxn2_prod i j]
-            end
             assert(imag(ln_Q) == 0)
             
             % figure out if the reaction is going to go forward or backward
-            delta_G = delta_G_st + ln_Q;
+            delta_G = delta_G_st + RT * ln_Q;
 
             % if reaction is going backward, then swap the product and reactant pointers
             if delta_G > 0
