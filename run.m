@@ -8,19 +8,22 @@ function [sol] = run_all()
 
 % constants
 diffusion_constant = 0.01;
-RT = 2.49; % 8.3 J K^-1 mol^-1 * 300 K = 2.49 kJ mol^-1
+RT = 2.49e-3; % 8.3 J K^-1 mol^-1 * 300 K = 2.49 kJ mol^-1 = 2.49e-3 kJ mmol^-1
 rate_constant = 1.0;
 
 % assertive parameters
-photo_depth_scale = 2.0; % 1/e distance for photosynthesis (meters)
-photo_rate_constant = 10.0; % convert CO2 concentration and photon density to rate
+photo_depth_scale = 0.1; % 1/e distance for photosynthesis (meters)
+photo_rate_constant = 1.0; % convert CO2 concentration and photon density to rate
+photo_delta_G_st = -100;
+
+metabolic_cutoff = 0.0; % Canfield's cutoff for useful metabolism
 
 % simulation parameters
-x_max = 10;
+x_max = 1;
 x_resolution = 10;
-t_max = 10;
-t_resolution = 20;
-minimum_concentration = 1e-7;
+t_max = 1;
+t_resolution = 10;
+minimum_concentration = 1e-4;
 
 % species list
 % specify the names of all the species and use those as keys that uses a
@@ -64,12 +67,11 @@ half_reactions = [
 function [u] = icfun(x)
     u = repmat(minimum_concentration, n_species, 1);
     
-    u(s('OH-')) = 1e-7;
+    u(s('OH-')) = 1e-4;
     %u(s('O(0)')) = exp(-x);
     %u(s('O(0)')) = 0.1;
-    %u(s('Fe(II)')) = exp(-(x_max - x));
-    u(s('Fe(II)')) = 0.1;
-    u(s('C(IV)')) = 0.3;
+    u(s('Fe(II)')) = 1;
+    u(s('C(IV)')) = 1;
 end
 
 % boundary conditions
@@ -86,7 +88,7 @@ tspan = linspace(0, t_max, t_resolution);
 
 % convert the last column into Gibbs free energies
 % delta G = -nFE
-faraday_constant = 96.485; % kJ per volt
+faraday_constant = 96.485e-1; % kJ volt^-1 mmol^-1
 half_reactions(:, 4) = -faraday_constant * half_reactions(:, 3) .* half_reactions(:, 4);
 
 % keep track of the number of half reactions
@@ -98,10 +100,18 @@ function [so] = source(x, u)
     
     % special case: photosynthesis consumes oxidized carbon (CO2) and
     % produces C(0) (glucose, carbohydrates) and oxidized oxygen (O2)
-    photo_rate = photo_rate_constant * exp(-x / photo_depth_scale) * u(s('C(IV)'));
-    so(s('C(IV)')) = so(s('C(IV)')) - photo_rate;
-    so(s('C(0)')) = so(s('C(0)')) + photo_rate;
-    so(s('O(0)')) = so(s('O(0)')) + photo_rate;
+    photons = exp(-x / photo_depth_scale);
+    ln_Q = log(u(s('C(0)'))) + log(u(s('O(0)'))) - log(u(s('C(IV)'))) - log(photons);
+    delta_G = photo_delta_G_st + ln_Q;
+    
+    if abs(delta_G) > abs(metabolic_cutoff)
+        photo_rate = -photo_rate_constant * u(s('C(IV)')) * photons * delta_G;
+        
+        %%photo_rate = photo_rate_constant * exp(-x / photo_depth_scale) * abs(minimum_concentration - u(s('C(IV)')));
+        so(s('C(IV)')) = so(s('C(IV)')) - photo_rate;
+        so(s('C(0)')) = so(s('C(0)')) + photo_rate;
+        so(s('O(0)')) = so(s('O(0)')) + photo_rate;
+    end
     
     % loop over every pair of half-reactions
     for i = 1: n_half_reactions - 1
@@ -152,7 +162,14 @@ function [so] = source(x, u)
             assert(delta_G < 0)
 
             % reaction is going forward
-            rxn1_rate = -rate_constant * rxn1_reac * (rxn2_prod ^ coeff) * delta_G;
+            % rate is proportional to the difference between delta G and
+            % the metabolic cutoff
+            if abs(delta_G) > abs(metabolic_cutoff)
+                rxn1_rate = rate_constant * rxn1_reac * (rxn2_prod ^ coeff) * abs(delta_G - metabolic_cutoff);
+            else
+                continue
+            end
+            
             assert(rxn1_rate > 0)
             rxn2_rate = coeff * rxn1_rate;
             
@@ -177,7 +194,10 @@ end
 function [c, f, so] = pdefun(x, t, u, dudx)
     % check that all the concentrations are positive
     if min(u) < 0
-        {'t' t 'u' u}
+        [c i] = min(u);
+        {'t' t 'u' u c i}
+        u
+        species(i)
     end
     assert(min(u) >= 0)
     
@@ -195,7 +215,7 @@ function [c, f, so] = pdefun(x, t, u, dudx)
 end
 
 m = 1;
-options = odeset('AbsTol', 1e-2 * minimum_concentration, 'MaxStep', 0.1);
+options = odeset('RelTol', 1e-3 * minimum_concentration, 'MaxStep', 1e-3, 'NonNegative', 7);
 sol = pdepe(m, @pdefun, @icfun, @bcfun, xmesh, tspan, options);
 
 end
