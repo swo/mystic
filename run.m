@@ -8,7 +8,7 @@ function [sol] = run()
 
 % constants
 diffusion_constant = 0.1;
-RT = 2.49e-3; % 8.3 J K^-1 mol^-1 * 300 K = 2.49 kJ mol^-1 = 2.49e-3 kJ mmol^-1
+RT = 2.49e-6; % 8.3 J K^-1 mol^-1 * 300 K = 2.49 kJ mol^-1 = 2.49e-6 kJ umol^-1
 rate_constant = 1.0;
 
 % assertive parameters
@@ -16,14 +16,14 @@ photo_depth_scale = 5.0; % 1/e distance for photosynthesis (meters)
 photo_rate_constant = 1.0; % convert CO2 concentration and photon density to rate
 photo_delta_G_st = -100;
 
-metabolic_cutoff = 0.02; % Canfield's cutoff for useful metabolism; -20 kJ mol^-1 = -0.02 kJ mmol^-1
+metabolic_cutoff = 0; % Canfield's cutoff for useful metabolism; -20 kJ mol^-1 = -2e-5 kJ mmol^-1
 
 % simulation parameters
 x_max = 20;
 x_resolution = 10;
-t_max = 0.05;
+t_max = 0.01;
 t_resolution = 10;
-minimum_concentration = 1e-4;
+minimum_concentration = 1e-1;
 
 % species list
 % specify the names of all the species and use those as keys that uses a
@@ -70,17 +70,17 @@ half_reactions = [
 function [u] = icfun(x)
     u = repmat(minimum_concentration, n_species, 1);
     
-    u(s('OH-')) = 1e-4;
+    u(s('OH-')) = 1e-1;
     
-    u(s('Fe(II)')) = 0.1;
+    u(s('Fe(II)')) = 100;
     
-    u(s('C(IV)')) = 1.5;
-    u(s('C(-IV)')) = 0.1;
+    u(s('C(IV)')) = 1500;
+    u(s('C(-IV)')) = 100;
     
-    u(s('S(VI)')) = 0.1;
+    u(s('S(VI)')) = 100;
     
-    u(s('N(V)')) = 0.05;
-    u(s('N(-III)')) = 0.1;
+    u(s('N(V)')) = 50;
+    u(s('N(-III)')) = 100;
 end
 
 % boundary conditions
@@ -97,7 +97,7 @@ tspan = linspace(0, t_max, t_resolution);
 
 % convert the last column into Gibbs free energies
 % delta G = -nFE
-faraday_constant = 96.485e-1; % kJ volt^-1 mmol^-1
+faraday_constant = 96.485e-6; % 96.4 kJ volt^-1 mol^-1 = 96.4e-6 umol^-1
 half_reactions(:, 4) = -faraday_constant * half_reactions(:, 3) .* half_reactions(:, 4);
 
 % keep track of the number of half reactions
@@ -226,8 +226,9 @@ end
 m = 1;
 
 %options = odeset('RelTol', 1e-3 * minimum_concentration, 'MaxStep', 1e-3, 'NonNegative', 7);
-%sol = pdepe(m, @pdefun, @icfun, @bcfun, xmesh, tspan, options);
+options = odeset('NonNegative', 10);
+sol = pdepe(m, @pdefun, @icfun, @bcfun, xmesh, tspan, options);
 
-sol = pdepe(m, @pdefun, @icfun, @bcfun, xmesh, tspan);
+%sol = pdepe(m, @pdefun, @icfun, @bcfun, xmesh, tspan);
 
 end
