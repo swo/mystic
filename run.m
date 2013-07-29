@@ -4,24 +4,24 @@
 
 % think again about the carbon cycle
 
-function [sol] = run_all()
+function [sol] = run()
 
 % constants
-diffusion_constant = 0.01;
+diffusion_constant = 0.1;
 RT = 2.49e-3; % 8.3 J K^-1 mol^-1 * 300 K = 2.49 kJ mol^-1 = 2.49e-3 kJ mmol^-1
 rate_constant = 1.0;
 
 % assertive parameters
-photo_depth_scale = 0.1; % 1/e distance for photosynthesis (meters)
+photo_depth_scale = 5.0; % 1/e distance for photosynthesis (meters)
 photo_rate_constant = 1.0; % convert CO2 concentration and photon density to rate
 photo_delta_G_st = -100;
 
-metabolic_cutoff = 0.0; % Canfield's cutoff for useful metabolism
+metabolic_cutoff = 0.02; % Canfield's cutoff for useful metabolism; -20 kJ mol^-1 = -0.02 kJ mmol^-1
 
 % simulation parameters
-x_max = 1;
+x_max = 20;
 x_resolution = 10;
-t_max = 1;
+t_max = 0.05;
 t_resolution = 10;
 minimum_concentration = 1e-4;
 
@@ -37,8 +37,10 @@ species = {
     'C(-IV)',
     'C(0)',
     'C(IV)'
-    %%'S(VI)',
-    %%'S(-II)'
+    'S(VI)',
+    'S(-II)',
+    'N(V)',
+    'N(-III)'
 };
 n_species = length(species);
 s = containers.Map(species, 1: n_species);
@@ -47,19 +49,20 @@ s = containers.Map(species, 1: n_species);
 % rows are: (species) + (# electrons) -> (species) with (standard electrode potential)
 half_reactions = [
     % oxygen
-    s('O(0)')       s('OH-')    2       0.820  % reduction of oxygen; Brock
+    s('O(0)')       s('OH-')        2   0.820  % reduction of oxygen; Brock
 
     % carbon
-    s('C(IV)')      s('C(0)')   4      -0.071 % opposite of fermentation
-    s('C(IV)')      s('C(-IV)') 8       0.170 % methanogenesis
+    s('C(IV)')      s('C(0)')       4  -0.071 % opposite of fermentation
+    s('C(IV)')      s('C(-IV)')     8   0.170 % methanogenesis
     
     % sulfur
-    %%s('S(VI)')      s('S(-II)') 8     0.299   % ?
+    s('S(VI)')      s('S(-II)')     8   0.299
     
     % iron
-    s('Fe(III)')    s('Fe(II)') 1     0.769 % wikipedia table
+    s('Fe(III)')    s('Fe(II)')     1   0.769 % wikipedia table
     
     % nitrogen
+    s('N(V)')       s('N(-III)')    8   0.4 % ammonia oxidation; Canfield figure
     
 ];
 
@@ -68,10 +71,16 @@ function [u] = icfun(x)
     u = repmat(minimum_concentration, n_species, 1);
     
     u(s('OH-')) = 1e-4;
-    %u(s('O(0)')) = exp(-x);
-    %u(s('O(0)')) = 0.1;
-    u(s('Fe(II)')) = 1;
-    u(s('C(IV)')) = 1;
+    
+    u(s('Fe(II)')) = 0.1;
+    
+    u(s('C(IV)')) = 1.5;
+    u(s('C(-IV)')) = 0.1;
+    
+    u(s('S(VI)')) = 0.1;
+    
+    u(s('N(V)')) = 0.05;
+    u(s('N(-III)')) = 0.1;
 end
 
 % boundary conditions
@@ -194,7 +203,7 @@ end
 function [c, f, so] = pdefun(x, t, u, dudx)
     % check that all the concentrations are positive
     if min(u) < 0
-        [c i] = min(u);
+        [c, i] = min(u);
         {'t' t 'u' u c i}
         u
         species(i)
@@ -215,7 +224,10 @@ function [c, f, so] = pdefun(x, t, u, dudx)
 end
 
 m = 1;
-options = odeset('RelTol', 1e-3 * minimum_concentration, 'MaxStep', 1e-3, 'NonNegative', 7);
-sol = pdepe(m, @pdefun, @icfun, @bcfun, xmesh, tspan, options);
+
+%options = odeset('RelTol', 1e-3 * minimum_concentration, 'MaxStep', 1e-3, 'NonNegative', 7);
+%sol = pdepe(m, @pdefun, @icfun, @bcfun, xmesh, tspan, options);
+
+sol = pdepe(m, @pdefun, @icfun, @bcfun, xmesh, tspan);
 
 end

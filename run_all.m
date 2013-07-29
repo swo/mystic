@@ -3,7 +3,7 @@ sol = run();
 clf;
 
 hold on;
-for i = [2 3 6 7]
+for i = [10]
     surf(sol(:, :, i))
 end
 xlabel('depth');
