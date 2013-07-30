@@ -1,9 +1,10 @@
+s = species_map();
 sol = run();
 
 clf;
 
 hold on;
-for i = [10]
+for i = [s('O(0)')]
     surf(sol(:, :, i))
 end
 xlabel('depth');

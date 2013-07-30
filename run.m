@@ -14,36 +14,19 @@ rate_constant = 1.0;
 % assertive parameters
 photo_depth_scale = 5.0; % 1/e distance for photosynthesis (meters)
 photo_rate_constant = 1.0; % convert CO2 concentration and photon density to rate
-photo_delta_G_st = -100;
+photo_delta_G_st = -10;
 
 metabolic_cutoff = 0; % Canfield's cutoff for useful metabolism; -20 kJ mol^-1 = -2e-5 kJ mmol^-1
 
 % simulation parameters
 x_max = 20;
 x_resolution = 10;
-t_max = 0.01;
+t_max = 0.1;
 t_resolution = 10;
 minimum_concentration = 1e-1;
 
 % species list
-% specify the names of all the species and use those as keys that uses a
-% map 's' to link them to integers. these integers will be their position
-% in the reaction matrices, etc.
-species = {
-    'OH-',
-    'O(0)',
-    'Fe(III)',
-    'Fe(II)',
-    'C(-IV)',
-    'C(0)',
-    'C(IV)'
-    'S(VI)',
-    'S(-II)',
-    'N(V)',
-    'N(-III)'
-};
-n_species = length(species);
-s = containers.Map(species, 1: n_species);
+[s, species, n_species] = species_map();
 
 % half-reaction matrix
 % rows are: (species) + (# electrons) -> (species) with (standard electrode potential)
@@ -169,6 +152,8 @@ function [so] = source(x, u)
             end
             % now we can pretend the reaction is going forward!
             assert(delta_G < 0)
+            
+
 
             % reaction is going forward
             % rate is proportional to the difference between delta G and
@@ -177,6 +162,14 @@ function [so] = source(x, u)
                 rxn1_rate = rate_constant * rxn1_reac * (rxn2_prod ^ coeff) * abs(delta_G - metabolic_cutoff);
             else
                 continue
+            end
+            
+                        %%check for what is going on in one of these
+            if rxn1_reac_i == 4 || rxn2_prod_i == 4
+                [species(rxn1_reac_i) rxn1_reac species(rxn2_prod_i) rxn2_prod]
+                [species(rxn1_reac_i) species(rxn2_prod_i) species(rxn1_prod_i) species(rxn2_reac_i)]
+                {'dgs' delta_G_st 'dG' delta_G 'rtlnq' RT * ln_Q 'rate' rxn1_rate}
+                assert(rxn1_rate < 1e4)
             end
             
             assert(rxn1_rate > 0)
@@ -225,8 +218,7 @@ end
 
 m = 1;
 
-%options = odeset('RelTol', 1e-3 * minimum_concentration, 'MaxStep', 1e-3, 'NonNegative', 7);
-options = odeset('NonNegative', 10);
+options = odeset('RelTol', 1e-3 * minimum_concentration, 'MaxStep', 1e-4);
 sol = pdepe(m, @pdefun, @icfun, @bcfun, xmesh, tspan, options);
 
 %sol = pdepe(m, @pdefun, @icfun, @bcfun, xmesh, tspan);
