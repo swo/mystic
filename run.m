@@ -16,6 +16,10 @@ photo_depth_scale = 5.0; % 1/e distance for photosynthesis (meters)
 photo_rate_constant = 1.0; % convert CO2 concentration and photon density to rate
 photo_delta_G_st = -10;
 
+% methanogenesis parameters
+mg_rate_constant = 1.0;
+mg_delta_G_modifier = 0.0; % accounts for the [H20]^2/[H2]^4 in Q
+
 metabolic_cutoff = 0; % Canfield's cutoff for useful metabolism; -20 kJ mol^-1 = -2e-5 kJ mmol^-1
 
 % simulation parameters
@@ -36,7 +40,7 @@ half_reactions = [
 
     % carbon
     s('C(IV)')      s('C(0)')       4  -0.071 % opposite of fermentation
-    s('C(IV)')      s('C(-IV)')     8   0.170 % methanogenesis
+    %%s('C(IV)')      s('C(-IV)')     8   0.170 % methanogenesis
     
     % sulfur
     s('S(VI)')      s('S(-II)')     8   0.299
@@ -104,6 +108,9 @@ function [so] = source(x, u)
         so(s('C(0)')) = so(s('C(0)')) + photo_rate;
         so(s('O(0)')) = so(s('O(0)')) + photo_rate;
     end
+    
+    % methanogenesis
+    
     
     % loop over every pair of half-reactions
     for i = 1: n_half_reactions - 1
