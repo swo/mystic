@@ -4,7 +4,8 @@ function [s, species, n_species] = species_map()
 % map 's' to link them to integers. these integers will be their position
 % in the reaction matrices, etc.
 species = {
-    'OH-',
+    'photons',
+    'water',
     'O(0)',
     'Fe(III)',
     'Fe(II)',

@@ -9,12 +9,12 @@ function [sol] = run()
 % constants
 diffusion_constant = 0.1;
 RT = 2.49e-6; % 8.3 J K^-1 mol^-1 * 300 K = 2.49 kJ mol^-1 = 2.49e-6 kJ umol^-1
-rate_constant = 1.0;
+rate_constant = 1e4;
+faraday_constant = 9.6485e-5; % 96.4 kJ volt^-1 mol^-1 = 96.4e-6 umol^-1
 
 % assertive parameters
-photo_depth_scale = 5.0; % 1/e distance for photosynthesis (meters)
-photo_rate_constant = 1.0; % convert CO2 concentration and photon density to rate
-photo_delta_G_st = -10;
+photon_depth_scale = 1.0; % 1/e distance for photosynthesis (meters)
+photo_delta_G_standard = -1e4;
 
 % methanogenesis parameters
 mg_rate_constant = 1.0;
@@ -23,41 +23,39 @@ mg_delta_G_modifier = 0.0; % accounts for the [H20]^2/[H2]^4 in Q
 metabolic_cutoff = 0; % Canfield's cutoff for useful metabolism; -20 kJ mol^-1 = -2e-5 kJ mmol^-1
 
 % simulation parameters
-x_max = 20;
+x_max = 15;
 x_resolution = 10;
-t_max = 0.1;
+t_max = 1;
 t_resolution = 10;
-minimum_concentration = 1e-1;
+minimum_concentration = 1e-6;
 
 % species list
 [s, species, n_species] = species_map();
 
-% half-reaction matrix
-% rows are: (species) + (# electrons) -> (species) with (standard electrode potential)
-half_reactions = [
-    % oxygen
-    s('O(0)')       s('OH-')        2   0.820  % reduction of oxygen; Brock
+reactions = [
+    % photosynthesis
+    1, s('C(IV)'), 0, s('photons'), 1, s('O(0)'), 1, s('C(0)'), photo_delta_G_standard, 1
+    
+    % denitrification
+    % N(V) + 2.0C(0) -> N(-III) + 2.0C(IV): delta Go  = -3.361363e-04
+    2.0, s('C(0)'), 1.0, s('N(V)'), 2.0, s('C(IV)'), 1.0, s('N(-III)'), -3.4e-4, 0
+    
+    % ammonia oxidation
+    % O(0) + 0.25N(-III) -> water + 0.25N(V): delta Go  = 1.505088e-04
+    1, s('N(-III)'), 4, s('O(0)'), 1, s('N(V)'), 0, s('water'), 1.5e-4, 0
 
-    % carbon
-    s('C(IV)')      s('C(0)')       4  -0.071 % opposite of fermentation
-    %%s('C(IV)')      s('C(-IV)')     8   0.170 % methanogenesis
-    
-    % sulfur
-    s('S(VI)')      s('S(-II)')     8   0.299
-    
-    % iron
-    s('Fe(III)')    s('Fe(II)')     1   0.769 % wikipedia table
-    
-    % nitrogen
-    s('N(V)')       s('N(-III)')    8   0.4 % ammonia oxidation; Canfield figure
-    
 ];
+n_reactions = n_rows(reactions);
 
 % initial conditions
 function [u] = icfun(x)
     u = repmat(minimum_concentration, n_species, 1);
-    
-    u(s('OH-')) = 1e-1;
+        
+    % make water so it doesn't enter the photosynthesis ln Q
+    u(s('water')) = 1.0;
+
+    % photon density decays exponentially
+    u(s('photons')) = exp(-x / photon_depth_scale);
     
     u(s('Fe(II)')) = 100;
     
@@ -82,115 +80,58 @@ end
 xmesh = linspace(0, x_max, x_resolution);
 tspan = linspace(0, t_max, t_resolution);
 
-% convert the last column into Gibbs free energies
-% delta G = -nFE
-faraday_constant = 96.485e-6; % 96.4 kJ volt^-1 mol^-1 = 96.4e-6 umol^-1
-half_reactions(:, 4) = -faraday_constant * half_reactions(:, 3) .* half_reactions(:, 4);
 
-% keep track of the number of half reactions
-n_half_reactions = n_rows(half_reactions);
 
 function [so] = source(x, u)
     %SOURCE compute the fluxes from the concentration vector u
     so = zeros(1, length(u));
     
-    % special case: photosynthesis consumes oxidized carbon (CO2) and
-    % produces C(0) (glucose, carbohydrates) and oxidized oxygen (O2)
-    photons = exp(-x / photo_depth_scale);
-    ln_Q = log(u(s('C(0)'))) + log(u(s('O(0)'))) - log(u(s('C(IV)'))) - log(photons);
-    delta_G = photo_delta_G_st + ln_Q;
-    
-    if abs(delta_G) > abs(metabolic_cutoff)
-        photo_rate = -photo_rate_constant * u(s('C(IV)')) * photons * delta_G;
+    for i = 1: n_reactions
+        % get the reaction data from the reaction matrix
+        reac1_coeff = reactions(i, 1);
+        reac1_i = reactions(i, 2);
+        reac1 = u(reac1_i);
+
+        reac2_coeff = reactions(i, 3);
+        reac2_i = reactions(i, 4);
+        reac2 = u(reac2_i);
         
-        %%photo_rate = photo_rate_constant * exp(-x / photo_depth_scale) * abs(minimum_concentration - u(s('C(IV)')));
-        so(s('C(IV)')) = so(s('C(IV)')) - photo_rate;
-        so(s('C(0)')) = so(s('C(0)')) + photo_rate;
-        so(s('O(0)')) = so(s('O(0)')) + photo_rate;
+        prod1_coeff = reactions(i, 5);
+        prod1_i = reactions(i, 6);
+        prod1 = u(prod1_i);
+
+        prod2_coeff = reactions(i, 7);
+        prod2_i = reactions(i, 8);
+        prod2 = u(prod2_i);
+
+        delta_G_standard = reactions(i, 9);
+
+        % compute the actual delta G   
+        ln_Q = prod1_coeff * log(prod1) + prod2_coeff * log(prod2) - reac1_coeff * log(reac1) - reac2_coeff * log(reac2);
+        delta_G = delta_G_standard + RT * ln_Q;
+
+        % check if the reaction will proceed
+        if delta_G < 0.0 && abs(delta_G) > abs(metabolic_cutoff)
+            rate = -rate_constant * delta_G;
+            assert(rate > 0)
+            
+            % if this is photosynthesis, also check for the number of photons
+            if reactions(i, 10) == 1
+                rate = rate * u(s('photons'));
+            end
+
+            so(reac1_i) = so(reac1_i) - reac1_coeff * rate;
+            so(reac2_i) = so(reac2_i) - reac2_coeff * rate;
+            so(prod1_i) = so(prod1_i) + prod1_coeff * rate;
+            so(prod2_i) = so(prod2_i) + prod2_coeff * rate;
+        else
+            rate = 0.0;
+        end
+        
+        {'rxni', i, 'dg', delta_G, 'dgo', delta_G_standard, 'lnq', ln_Q, 'rate', rate, reac1, reac2, prod1, prod2, 'lnK', -delta_G_standard / RT};
     end
     
     % methanogenesis
-    
-    
-    % loop over every pair of half-reactions
-    for i = 1: n_half_reactions - 1
-        for j = i + 1: n_half_reactions
-            % assign all these pointers inside the inner loop so they can
-            % be reassigned for reversed reactions
-            rxn1_reac_i = half_reactions(i, 1);
-            rxn1_reac = u(rxn1_reac_i);
-            rxn1_prod_i = half_reactions(i, 2);
-            rxn1_prod = u(rxn1_prod_i);
-            
-            rxn2_reac_i = half_reactions(j, 1);
-            rxn2_reac = u(rxn2_reac_i);
-            rxn2_prod_i = half_reactions(j, 2);
-            rxn2_prod = u(rxn2_prod_i);
-            
-            % find the standard delta G
-            delta_G_st = half_reactions(i, 4) - half_reactions(j, 4);
-            
-            % find the stoichiometric coefficient for the second reaction
-            % so that the number of electrons is conserved
-            coeff = half_reactions(i, 3) / half_reactions(j, 3);
-            
-            % compute ln Q for the forward reaction
-            % NOTE! the forward reaction means that half-reaction rxn1 is
-            % going forward (is a reduction) and rxn2 is going backwards (ie is an
-            % oxidation)
-            ln_Q = log(rxn1_prod) - log(rxn1_reac) + coeff * (log(rxn2_reac) - log(rxn2_prod));
-            assert(imag(ln_Q) == 0)
-            
-            % figure out if the reaction is going to go forward or backward
-            delta_G = delta_G_st + RT * ln_Q;
-
-            % if reaction is going backward, then swap the product and reactant pointers
-            if delta_G > 0
-                % swap delta G
-                delta_G = -delta_G;
-
-                % swap the indices
-                [rxn1_reac_i, rxn1_prod_i] = swap(rxn1_reac_i, rxn1_prod_i);
-                [rxn2_reac_i, rxn2_prod_i] = swap(rxn2_reac_i, rxn2_prod_i);
-
-                % swap the concentrations
-                [rxn1_reac, rxn1_prod] = swap(rxn1_reac, rxn1_prod);
-                [rxn2_reac, rxn2_prod] = swap(rxn2_reac, rxn2_prod);
-            end
-            % now we can pretend the reaction is going forward!
-            assert(delta_G < 0)
-            
-
-
-            % reaction is going forward
-            % rate is proportional to the difference between delta G and
-            % the metabolic cutoff
-            if abs(delta_G) > abs(metabolic_cutoff)
-                rxn1_rate = rate_constant * rxn1_reac * (rxn2_prod ^ coeff) * abs(delta_G - metabolic_cutoff);
-            else
-                continue
-            end
-            
-                        %%check for what is going on in one of these
-            if rxn1_reac_i == 4 || rxn2_prod_i == 4
-                [species(rxn1_reac_i) rxn1_reac species(rxn2_prod_i) rxn2_prod]
-                [species(rxn1_reac_i) species(rxn2_prod_i) species(rxn1_prod_i) species(rxn2_reac_i)]
-                {'dgs' delta_G_st 'dG' delta_G 'rtlnq' RT * ln_Q 'rate' rxn1_rate}
-                assert(rxn1_rate < 1e4)
-            end
-            
-            assert(rxn1_rate > 0)
-            rxn2_rate = coeff * rxn1_rate;
-            
-            % first half-reaction goes forward
-            so(rxn1_reac_i) = so(rxn1_reac_i) - rxn1_rate;
-            so(rxn1_prod_i) = so(rxn1_prod_i) + rxn1_rate;
-
-            % second half-reaction goes backward
-            so(rxn2_reac_i) = so(rxn2_reac_i) + rxn2_rate;
-            so(rxn2_prod_i) = so(rxn2_prod_i) - rxn2_rate;
-        end
-    end
     
     % check that everything went somewhere
     % but we pull O2 from nowhere using photosynthesis!
@@ -201,6 +142,9 @@ end
 
 % -- function for computing the instantaneous differential equations --
 function [c, f, so] = pdefun(x, t, u, dudx)
+    % enforce nonnegativity in a kludge way
+    u(u < minimum_concentration) = minimum_concentration;
+    
     % check that all the concentrations are positive
     if min(u) < 0
         [c, i] = min(u);
@@ -213,21 +157,26 @@ function [c, f, so] = pdefun(x, t, u, dudx)
     % coupling constant is 1 for each species
     c = ones(n_species, 1);
 
-    % diffusion term is the same for all species
+    % diffusion term is the same for all species except photons and water
     f = diffusion_constant * dudx;
+    f(s('water')) = 0.0;
+    f(s('photons')) = 0.0;
 
     % compute the source terms from the previously defined function
     so = source(x, u);
     
-    % ignore any changes to hydroxide concentration
-    so(s('OH-')) = 0;
+    % ignore any changes to water or photon concentration
+    so(s('water')) = 0.0;
+    so(s('photons')) = 0.0;
 end
 
 m = 1;
 
-options = odeset('RelTol', 1e-3 * minimum_concentration, 'MaxStep', 1e-4);
-sol = pdepe(m, @pdefun, @icfun, @bcfun, xmesh, tspan, options);
-
-%sol = pdepe(m, @pdefun, @icfun, @bcfun, xmesh, tspan);
-
+use_options = 0;
+if use_options
+    options = odeset('RelTol', 1e-3 * minimum_concentration, 'MaxStep', 1e-4);
+    sol = pdepe(m, @pdefun, @icfun, @bcfun, xmesh, tspan, options);
+else
+    sol = pdepe(m, @pdefun, @icfun, @bcfun, xmesh, tspan);
+end
 end
