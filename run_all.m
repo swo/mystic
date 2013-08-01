@@ -3,14 +3,23 @@ sol = run();
 
 clf;
 
+l = 0;
 hold on;
-for i = [s('O(0)'), s('C(0)'), s('C(IV)')]
+for i = [s('O(0)'), s('N(-III)'), s('C(IV)')]
     u = sol(:, :, i);
-    u(u < 0) = 1e-7;
+    
+    if l
+        u(u < 0) = 1e-7;
+    end
+    
     surf(u)
 end
 xlabel('depth');
 ylabel('time');
 zlabel('concentration');
-set(gca, 'ZScale', 'log');
+
+if l
+    set(gca, 'ZScale', 'log');
+end
+
 hold off;
