@@ -26,7 +26,7 @@ assert(metabolic_cutoff <= 0.0)
 % simulation parameters
 x_max = 15;
 x_resolution = 5;
-t_max = 1000;
+t_max = 100;
 t_resolution = 10;
 minimum_concentration = 1e-2;
 
@@ -69,6 +69,9 @@ function [u] = icfun(x)
     
     u(s('N(V)')) = 50;
     u(s('N(-III)')) = 100;
+    
+    % convert to log domain
+    u = log(u);
 end
 
 % boundary conditions
@@ -101,13 +104,6 @@ delta_G_standard = reactions(:, 9);
 function [so] = source(x, u)
     %SOURCE compute the fluxes from the concentration vector u
     so = zeros(length(u), 1);
-    u
-    u(s('C(0)'))
-    
-    if any(u < 0)
-        species(u < 0)
-    end
-    assert(all(u > 0))
 
     % column column vectors of concentrations
     reac1 = u(reac1_i);
@@ -116,37 +112,34 @@ function [so] = source(x, u)
     prod2 = u(prod2_i);
     
     % compute the actual delta G
-    ln_Q = prod1_coeff .* log(prod1) + prod2_coeff .* log(prod2) - ...
-        (reac1_coeff .* log(reac1) + reac2_coeff .* log(reac2));
+    ln_Q = prod1_coeff .* prod1 + prod2_coeff .* prod2 - reac1_coeff .* reac1 - reac2_coeff .* reac2;
     delta_G = delta_G_standard + RT * ln_Q;
-    
-    assert(max(imag(ln_Q)) == 0)
 
     % ignore reactions that go backwards
     delta_G(delta_G > 0.0) = 0.0;
 
-    % stop reactions that have negative reactants
-    delta_G(reac1 < 0.0 | reac2 < 0.0) = 0.0;
-
     % decrease all reactions by the metabolic cutoff
-    rate = rate_constant * reac1 .^ reac1_coeff .* reac2 .^ reac2_coeff .* max(0, -delta_G + metabolic_cutoff);
+    %rate = rate_constant * reac1 .^ reac1_coeff .* reac2 .^ reac2_coeff .* max(0, -delta_G + metabolic_cutoff);
+    rate = -rate_constant * delta_G;
+    assert(all(rate >= 0.0))
             
     % if this is photosynthesis, also check for the number of photons
     rate(photosynthesis_i) = rate(photosynthesis_i) * u(s('photons'));
 
-    so(reac1_i) = so(reac1_i) - reac1_coeff .* rate;
-    so(reac2_i) = so(reac2_i) - reac2_coeff .* rate;
-    so(prod1_i) = so(prod1_i) + prod1_coeff .* rate;
-    so(prod2_i) = so(prod2_i) + prod2_coeff .* rate;
+    % add rates to species, converting to log domains as they go by
+    % dividing by the concentrations
+    so(reac1_i) = so(reac1_i) - reac1_coeff .* rate ./ exp(reac1);
+    so(reac2_i) = so(reac2_i) - reac2_coeff .* rate ./ exp(reac2);
+    so(prod1_i) = so(prod1_i) + prod1_coeff .* rate ./ exp(prod1);
+    so(prod2_i) = so(prod2_i) + prod2_coeff .* rate ./ exp(prod2);
     
-    so = so.'
+    so = so.';
 end
 
 
 % -- function for computing the instantaneous differential equations --
 ignored_species = [s('water') s('photons')];
 function [c, f, so] = pdefun(x, t, u, dudx)
-    t
     
     % coupling constant is 1 for each species
     c = ones(n_species, 1);
@@ -154,9 +147,12 @@ function [c, f, so] = pdefun(x, t, u, dudx)
     % diffusion term is the same for all species except photons and water
     f = diffusion_constant * dudx;
     f(ignored_species) = 0.0;
+    
+    % add the second half of the diffusion terms using the source term
+    so = diffusion_constant * dudx' .^ 2;
 
     % compute the source terms from the previously defined function
-    so = source(x, u);
+    so = so + source(x, u);
     
     % ignore any changes to water or photon concentration
     so(ignored_species) = 0.0;
