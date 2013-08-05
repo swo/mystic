@@ -4,8 +4,9 @@ sol = run();
 clf;
 
 l = 0;
+
 hold on;
-for i = [s('O(0)'), s('N(-III)'), s('C(IV)')]
+for i = cellfun(@(x) s(x), {'O(0)', 'N(V)', 'N(-III)'})
     u = sol(:, :, i);
     
     if l
