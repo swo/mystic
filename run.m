@@ -8,19 +8,19 @@ function [sol] = run()
 
 % constants
 diffusion_constant = 0.0;
-RT = 2.49e-6; % 8.3 J K^-1 mol^-1 * 300 K = 2.49 kJ mol^-1 = 2.49e-6 kJ umol^-1
+RT = 2.49; % 8.3 J K^-1 mol^-1 * 300 K = 2.49 kJ mol^-1
 rate_constant = 1.0;
-faraday_constant = 9.6485e-5; % 96.4 kJ volt^-1 mol^-1 = 96.4e-6 umol^-1
+faraday_constant = 96.5; % 96.4 kJ volt^-1 mol^-1
 
 % assertive parameters
 photon_depth_scale = 1.0; % 1/e distance for photosynthesis (meters)
-photo_delta_G_standard = -1e-4;
+photo_delta_G_standard = -100;
 
 % methanogenesis parameters
 mg_rate_constant = 1.0;
 mg_delta_G_modifier = 0.0; % accounts for the [H20]^2/[H2]^4 in Q
 
-metabolic_cutoff = 0.0; % Canfield's cutoff for useful metabolism; -20 kJ mol^-1 = -2e-5 kJ mmol^-1
+metabolic_cutoff = 0.0; % Canfield's cutoff for useful metabolism; -20 kJ mol^-1
 assert(metabolic_cutoff <= 0.0)
 
 % simulation parameters
@@ -39,11 +39,11 @@ reactions = [
     
     % denitrification
     % N(V) + 2.0C(0) -> N(-III) + 2.0C(IV): delta Go  = -3.361363e-04
-    2.0, s('C(0)'), 1.0, s('N(V)'), 2.0, s('C(IV)'), 1.0, s('N(-III)'), -3.6e-4
+    2.0, s('C(0)'), 1.0, s('N(V)'), 2.0, s('C(IV)'), 1.0, s('N(-III)'), -364
     
     % ammonia oxidation
     % O(0) + 0.25N(-III) -> water + 0.25N(V): delta Go  = 1.505088e-04
-    1, s('N(-III)'), 4, s('O(0)'), 1, s('N(V)'), 1, s('water'), -8.1e-5
+    1, s('N(-III)'), 4, s('O(0)'), 1, s('N(V)'), 1, s('water'), -81
 
 ];
 n_reactions = n_rows(reactions);
@@ -73,7 +73,7 @@ function [u] = icfun(x)
     u(s('N(-III)')) = 100;
     
     % convert to log domain
-    u = log(u);
+    u = log10(u);
 end
 
 % boundary conditions
@@ -124,7 +124,7 @@ function [so] = source(x, u)
     % decrease all reactions by the metabolic cutoff
     %rate = rate_constant * reac1 .^ reac1_coeff .* reac2 .^ reac2_coeff .* max(0, -delta_G + metabolic_cutoff);
     %rate = -rate_constant * delta_G;
-    rate = rate_constant * (reac1_coeff .* exp(reac1) + reac2_coeff .* exp(reac1)) .* (-delta_G)
+    rate = rate_constant * (reac1_coeff .* exp10(reac1) + reac2_coeff .* exp10(reac1)) .* (-delta_G)
             
     % if this is photosynthesis, also check for the number of photons
     rate(photosynthesis_i) = rate(photosynthesis_i) * exp(u(s('photons')));
@@ -132,10 +132,10 @@ function [so] = source(x, u)
 
     % add rates to species, converting to log domains as they go by
     % dividing by the concentrations
-    so(reac1_i) = so(reac1_i) - reac1_coeff .* rate ./ exp(reac1);
-    so(reac2_i) = so(reac2_i) - reac2_coeff .* rate ./ exp(reac2);
-    so(prod1_i) = so(prod1_i) + prod1_coeff .* rate ./ exp(prod1);
-    so(prod2_i) = so(prod2_i) + prod2_coeff .* rate ./ exp(prod2);
+    so(reac1_i) = so(reac1_i) - reac1_coeff .* rate ./ exp10(reac1);
+    so(reac2_i) = so(reac2_i) - reac2_coeff .* rate ./ exp10(reac2);
+    so(prod1_i) = so(prod1_i) + prod1_coeff .* rate ./ exp10(prod1);
+    so(prod2_i) = so(prod2_i) + prod2_coeff .* rate ./ exp10(prod2);
     
     so = so'
     u;

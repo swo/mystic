@@ -1,5 +1,5 @@
 s = species_map();
-%sol = run();
+sol = run();
 
 clf;
 
