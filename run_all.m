@@ -1,17 +1,13 @@
 s = species_map();
-sol = run();
+%sol = run();
 
 clf;
 
 l = 0;
 
 hold on;
-for i = cellfun(@(x) s(x), {'O(0)', 'N(V)', 'N(-III)'})
+for i = cellfun(@(x) s(x), {'O(0)', 'N(-III)', 'N(V)'})
     u = sol(:, :, i);
-    
-    if l
-        u(u < 0) = 1e-7;
-    end
     
     surf(u)
 end

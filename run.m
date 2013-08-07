@@ -14,7 +14,7 @@ faraday_constant = 9.6485e-5; % 96.4 kJ volt^-1 mol^-1 = 96.4e-6 umol^-1
 
 % assertive parameters
 photon_depth_scale = 1.0; % 1/e distance for photosynthesis (meters)
-photo_delta_G_standard = -1e-3;
+photo_delta_G_standard = -1e-4;
 
 % methanogenesis parameters
 mg_rate_constant = 1.0;
@@ -26,7 +26,7 @@ assert(metabolic_cutoff <= 0.0)
 % simulation parameters
 x_max = 15;
 x_resolution = 5;
-t_max = 10000;
+t_max = 1;
 t_resolution = 10;
 minimum_concentration = 1e-2;
 
@@ -61,15 +61,15 @@ function [u] = icfun(x)
     u(s('O(0)')) = 10 * u(s('photons'));
     
     u(s('Fe(II)')) = 150;
-    u(s('Fe(III)')) = 10;
+    u(s('Fe(III)')) = 1;
     
     u(s('C(IV)')) = 1500;
-    u(s('C(-IV)')) = 100;
+    u(s('C(-IV)')) = 1;
     
     u(s('S(VI)')) = 100;
-    u(s('S(-II)')) = 10;
+    u(s('S(-II)')) = 1;
     
-    u(s('N(V)')) = 50;
+    u(s('N(V)')) = 1;
     u(s('N(-III)')) = 100;
     
     % convert to log domain
@@ -123,7 +123,8 @@ function [so] = source(x, u)
 
     % decrease all reactions by the metabolic cutoff
     %rate = rate_constant * reac1 .^ reac1_coeff .* reac2 .^ reac2_coeff .* max(0, -delta_G + metabolic_cutoff);
-    rate = -rate_constant * delta_G;
+    %rate = -rate_constant * delta_G;
+    rate = rate_constant * (reac1_coeff .* exp(reac1) + reac2_coeff .* exp(reac1)) .* (-delta_G)
             
     % if this is photosynthesis, also check for the number of photons
     rate(photosynthesis_i) = rate(photosynthesis_i) * exp(u(s('photons')));
@@ -137,7 +138,11 @@ function [so] = source(x, u)
     so(prod2_i) = so(prod2_i) + prod2_coeff .* rate ./ exp(prod2);
     
     so = so'
-    assert(max(so) < 1e6)
+    u;
+    %assert(max(so) < 1e6)
+    if max(so) > 1e6
+        so;
+    end
 end
 
 
