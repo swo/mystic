@@ -7,9 +7,9 @@
 function [sol] = run()
 
 % constants
-diffusion_constant = 0.1;
+diffusion_constant = 0.0;
 RT = 2.49e-6; % 8.3 J K^-1 mol^-1 * 300 K = 2.49 kJ mol^-1 = 2.49e-6 kJ umol^-1
-rate_constant = 1e1;
+rate_constant = 1.0;
 faraday_constant = 9.6485e-5; % 96.4 kJ volt^-1 mol^-1 = 96.4e-6 umol^-1
 
 % assertive parameters
@@ -26,7 +26,7 @@ assert(metabolic_cutoff <= 0.0)
 % simulation parameters
 x_max = 15;
 x_resolution = 5;
-t_max = 100;
+t_max = 10000;
 t_resolution = 10;
 minimum_concentration = 1e-2;
 
@@ -61,11 +61,13 @@ function [u] = icfun(x)
     u(s('O(0)')) = 10 * u(s('photons'));
     
     u(s('Fe(II)')) = 150;
+    u(s('Fe(III)')) = 10;
     
     u(s('C(IV)')) = 1500;
     u(s('C(-IV)')) = 100;
     
     u(s('S(VI)')) = 100;
+    u(s('S(-II)')) = 10;
     
     u(s('N(V)')) = 50;
     u(s('N(-III)')) = 100;
@@ -117,14 +119,15 @@ function [so] = source(x, u)
 
     % ignore reactions that go backwards
     delta_G(delta_G > 0.0) = 0.0;
+    assert(all(delta_G <= 0.0))
 
     % decrease all reactions by the metabolic cutoff
     %rate = rate_constant * reac1 .^ reac1_coeff .* reac2 .^ reac2_coeff .* max(0, -delta_G + metabolic_cutoff);
     rate = -rate_constant * delta_G;
-    assert(all(rate >= 0.0))
             
     % if this is photosynthesis, also check for the number of photons
-    rate(photosynthesis_i) = rate(photosynthesis_i) * u(s('photons'));
+    rate(photosynthesis_i) = rate(photosynthesis_i) * exp(u(s('photons')));
+    assert(all(rate >= 0.0))
 
     % add rates to species, converting to log domains as they go by
     % dividing by the concentrations
@@ -133,7 +136,8 @@ function [so] = source(x, u)
     so(prod1_i) = so(prod1_i) + prod1_coeff .* rate ./ exp(prod1);
     so(prod2_i) = so(prod2_i) + prod2_coeff .* rate ./ exp(prod2);
     
-    so = so.';
+    so = so'
+    assert(max(so) < 1e6)
 end
 
 
@@ -150,6 +154,7 @@ function [c, f, so] = pdefun(x, t, u, dudx)
     
     % add the second half of the diffusion terms using the source term
     so = diffusion_constant * dudx' .^ 2;
+    so(ignored_species) = 0.0;
 
     % compute the source terms from the previously defined function
     so = so + source(x, u);
