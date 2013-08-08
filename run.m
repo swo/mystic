@@ -29,7 +29,7 @@ minimum_concentration = 1e-9;
 
 reactions = [
     % photosynthesis
-    1, s('C(IV)'), 0, s('photons'), 2, s('O(0)'), 1, s('C(0)'), photo_delta_G_standard
+    1, s('C(IV)'), 0, s('water'), 2, s('O(0)'), 1, s('C(0)'), photo_delta_G_standard
     
     % denitrification
     % N(V) + 2.0C(0) -> N(-III) + 2.0C(IV): delta Go  = -3.361363e-04
@@ -51,7 +51,7 @@ function [u] = icfun(x)
     u(s('water')) = 1.0;
 
     % photon density decays exponentially
-    u(s('photons')) = exp(-x / photon_depth_scale);
+    %u(s('photons')) = exp(-x / photon_depth_scale);
     %u(s('O(0)')) = 10e-6 * u(s('photons'));
     u(s('O(0)')) = 10e-6;
     
@@ -135,10 +135,10 @@ function [so] = source(x, u)
     % decrease all reactions by the metabolic cutoff
     %rate = rate_constant * reac1 .^ reac1_coeff .* reac2 .^ reac2_coeff .* max(0, -delta_G + metabolic_cutoff);
     %rate = -rate_constant * delta_G;
-    rate = rate_constant * (reac1_coeff .* exp10(reac1) + reac2_coeff .* exp10(reac1)) .* (-delta_G);
+    rate = rate_constant * (reac1_coeff .* exp10(reac1) + reac2_coeff .* exp10(reac1)) .* (-delta_G)
             
     % if this is photosynthesis, also check for the number of photons
-    rate(photosynthesis_i) = rate(photosynthesis_i) * exp(u(s('photons')));
+    rate(photosynthesis_i) = rate(photosynthesis_i) * exp(-x / photon_depth_scale)
     assert(all(rate >= 0.0))
     assert(all(isfinite(rate)))
 
@@ -149,12 +149,12 @@ function [so] = source(x, u)
     so(prod1_i) = so(prod1_i) + prod1_coeff .* rate;
     so(prod2_i) = so(prod2_i) + prod2_coeff .* rate;
     
-    so = so';
+    so = so'
 end
 
 
 % -- function for computing the instantaneous differential equations --
-ignored_species = [s('water') s('photons')];
+ignored_species = [s('water')];
 function [c, f, so] = pdefun(x, t, u, dudx)
     if ~all(isfinite(dudx))
         u
@@ -179,7 +179,13 @@ function [c, f, so] = pdefun(x, t, u, dudx)
     so(ignored_species) = 0.0;
 
     % compute the source terms from the previously defined function
+    'from before'
+    so
+    'exp10'
+    exp10(u')
+    'after source and exp added'
     so = so + source(x, u) ./ exp10(u')
+    'done adding'
     assert(~any(isnan(so)))
     assert(all(isfinite(so)))
     assert(all(abs(so) < 10))
