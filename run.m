@@ -1,9 +1,3 @@
-% todo:
-% add an oxygen production term: oxygen can only be produced near the
-% surface, but it requires carbon species that flow from the top
-
-% think again about the carbon cycle
-
 function [sol] = run()
 
 % constants
@@ -13,8 +7,8 @@ rate_constant = 1.0;
 faraday_constant = 96.5; % 96.4 kJ volt^-1 mol^-1
 
 % assertive parameters
-photon_depth_scale = 1.0; % 1/e distance for photosynthesis (meters)
-photo_delta_G_standard = -100;
+photon_depth_scale = 0.5; % 1/e distance for photosynthesis (meters)
+photo_delta_G_standard = -500;
 
 % methanogenesis parameters
 mg_rate_constant = 1.0;
@@ -25,10 +19,10 @@ assert(metabolic_cutoff <= 0.0)
 
 % simulation parameters
 x_max = 15;
-x_resolution = 5;
-t_max = 1;
+x_resolution = 10;
+t_max = 100;
 t_resolution = 10;
-minimum_concentration = 1e-2;
+minimum_concentration = 1e-9;
 
 % species list
 [s, species, n_species] = species_map();
@@ -58,19 +52,20 @@ function [u] = icfun(x)
 
     % photon density decays exponentially
     u(s('photons')) = exp(-x / photon_depth_scale);
-    u(s('O(0)')) = 10 * u(s('photons'));
+    %u(s('O(0)')) = 10e-6 * u(s('photons'));
+    u(s('O(0)')) = 10e-6;
     
-    u(s('Fe(II)')) = 150;
-    u(s('Fe(III)')) = 1;
+    u(s('Fe(II)')) = 150e-6;
+    u(s('Fe(III)')) = 10e-6;
     
-    u(s('C(IV)')) = 1500;
-    u(s('C(-IV)')) = 1;
+    u(s('C(IV)')) = 1500e-6;
+    u(s('C(-IV)')) = 10e-6;
     
-    u(s('S(VI)')) = 100;
-    u(s('S(-II)')) = 1;
+    u(s('S(VI)')) = 100e-6;
+    u(s('S(-II)')) = 10e-6;
     
-    u(s('N(V)')) = 1;
-    u(s('N(-III)')) = 100;
+    u(s('N(V)')) = 10e-6;
+    u(s('N(-III)')) = 100e-6;
     
     % convert to log domain
     u = log10(u);
@@ -115,40 +110,61 @@ function [so] = source(x, u)
     
     % compute the actual delta G
     ln_Q = prod1_coeff .* prod1 + prod2_coeff .* prod2 - reac1_coeff .* reac1 - reac2_coeff .* reac2;
+    if any(isnan(ln_Q))
+        u
+        prod1_coeff
+        prod1
+        prod2_coeff
+        prod2
+        reac1_coeff
+        reac1
+        reac2_coeff
+        reac2
+    end
+    assert(~any(isnan(ln_Q)))
     delta_G = delta_G_standard + RT * ln_Q;
+    assert(~any(isnan(delta_G)))
 
     % ignore reactions that go backwards
     delta_G(delta_G > 0.0) = 0.0;
+    if ~all(delta_G <= 0.0)
+        delta_G
+    end
     assert(all(delta_G <= 0.0))
 
     % decrease all reactions by the metabolic cutoff
     %rate = rate_constant * reac1 .^ reac1_coeff .* reac2 .^ reac2_coeff .* max(0, -delta_G + metabolic_cutoff);
     %rate = -rate_constant * delta_G;
-    rate = rate_constant * (reac1_coeff .* exp10(reac1) + reac2_coeff .* exp10(reac1)) .* (-delta_G)
+    rate = rate_constant * (reac1_coeff .* exp10(reac1) + reac2_coeff .* exp10(reac1)) .* (-delta_G);
             
     % if this is photosynthesis, also check for the number of photons
     rate(photosynthesis_i) = rate(photosynthesis_i) * exp(u(s('photons')));
     assert(all(rate >= 0.0))
+    assert(all(isfinite(rate)))
 
     % add rates to species, converting to log domains as they go by
     % dividing by the concentrations
-    so(reac1_i) = so(reac1_i) - reac1_coeff .* rate ./ exp10(reac1);
-    so(reac2_i) = so(reac2_i) - reac2_coeff .* rate ./ exp10(reac2);
-    so(prod1_i) = so(prod1_i) + prod1_coeff .* rate ./ exp10(prod1);
-    so(prod2_i) = so(prod2_i) + prod2_coeff .* rate ./ exp10(prod2);
+    so(reac1_i) = so(reac1_i) - reac1_coeff .* rate;
+    so(reac2_i) = so(reac2_i) - reac2_coeff .* rate;
+    so(prod1_i) = so(prod1_i) + prod1_coeff .* rate;
+    so(prod2_i) = so(prod2_i) + prod2_coeff .* rate;
     
-    so = so'
-    u;
-    %assert(max(so) < 1e6)
-    if max(so) > 1e6
-        so;
-    end
+    so = so';
 end
 
 
 % -- function for computing the instantaneous differential equations --
 ignored_species = [s('water') s('photons')];
 function [c, f, so] = pdefun(x, t, u, dudx)
+    if ~all(isfinite(dudx))
+        u
+        dudx
+        t
+    end
+    assert(all(isfinite(dudx)))
+    assert(all(isfinite(u)))
+    assert(~any(isnan(u)))
+    assert(~any(isnan(dudx)))
     
     % coupling constant is 1 for each species
     c = ones(n_species, 1);
@@ -156,13 +172,17 @@ function [c, f, so] = pdefun(x, t, u, dudx)
     % diffusion term is the same for all species except photons and water
     f = diffusion_constant * dudx;
     f(ignored_species) = 0.0;
+    assert(all(isfinite(f)))
     
     % add the second half of the diffusion terms using the source term
     so = diffusion_constant * dudx' .^ 2;
     so(ignored_species) = 0.0;
 
     % compute the source terms from the previously defined function
-    so = so + source(x, u);
+    so = so + source(x, u) ./ exp10(u')
+    assert(~any(isnan(so)))
+    assert(all(isfinite(so)))
+    assert(all(abs(so) < 10))
     
     % ignore any changes to water or photon concentration
     so(ignored_species) = 0.0;
