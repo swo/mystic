@@ -1,13 +1,12 @@
 function [sol] = run()
 
 % constants
-diffusion_constant = 1e3;
+diffusion_constant = 1e-2;
 RT = 1.0; % 8.3 J K^-1 mol^-1 * 300 K = 2.49 kJ mol^-1
-rate_constant = 1.0;
-total_rate = 1e-3;
+rate_constant = 1e-2;
 
 % assertive parameters
-photo_rate_constant = 1.0;
+photo_rate_constant = 1e-2;
 photon_depth_scale = 0.5; % 1/e distance for photosynthesis (meters)
 
 metabolic_cutoff = 0.0; % Canfield's cutoff for useful metabolism; -20 kJ mol^-1
@@ -15,47 +14,41 @@ assert(metabolic_cutoff <= 0.0)
 
 % simulation parameters
 x_max = 15;
-x_resolution = 100;
-t_max = 10.0;
+x_resolution = 50;
+t_max = 1.2e-4;
 t_resolution = 10;
 minimum_concentration = 1e-9;
 
 % species list
-species = {
-    '',
-    'C0', 'CI', 'CIV', 'C-IV',
-    'H',
-    'O', 'N+', 'N-'
-    };
+species = {'', 'C0', 'CI', 'CIV', 'C-IV', 'H', 'O', 'N+', 'N-'};
 n_species = length(species);
 s = containers.Map(species, 1: n_species);
 
 reactions = [
     % O reduction (aerobic respiration)
     % O + C(x) -> C(x+1)
-    s('O'), s('C0'), s('CI'), s(''), -8
-    s('O'), s('CI'), s('CIV'), s(''), -4
+    s('O'), s('C0'), s('CI'), s(''), -500
+    s('O'), s('CI'), s('CIV'), s(''), -200
 
     % fermentation
     % C(x) -> C(x+1) + H
-    s('C0'), s(''), s('CI'), s('H'), -1.0
-    s('CI'), s(''), s('CIV)', s('H'), -0.25
+    s('C0'), s(''), s('CI'), s('H'), -100
+    s('CI'), s(''), s('CIV'), s('H'), -50
 
     % N reduction (denitrification)
     % N+ + C(x) -> N- + C(x+1)
-    s('N+'), s('C0'), s('N-'), s('CI'), -4
-    s('N+'), s('CI'), s('N-'), s('CIV'), -1
+    s('N+'), s('C0'), s('N-'), s('CI'), -300
+    s('N+'), s('CI'), s('N-'), s('CIV'), -150
 
     % N oxidation (ammox)
     % N- + O -> N+
-    s('N-'), s('O'), s('N+'), s(''), -2
+    s('N-'), s('O'), s('N+'), s(''), -80
     
     % methanogenesis
     % CIV + H -> C-IV
-    s('CIV'), s('H'), s('C-IV'), s(''), +0.25
+    s('CIV'), s('H'), s('C-IV'), s(''), -8
 ];
-n_reactions = n_rows(reactions);
-photosynthesis_i = 1;   % index of photosynthesis reaction
+
 
 % initial conditions
 function [u] = icfun(x)
@@ -63,7 +56,7 @@ function [u] = icfun(x)
         
     % null is at standard
     u(s('')) = 1.0;
-    u(s('N+')) = 100e-6;
+    u(s('N-')) = 10e-6;
     
     % convert to log domain
     u = log10(u);
@@ -82,11 +75,11 @@ end
 
 % -- source term --
 % grab the unchanging columns from the reaction matrix
-reac1_coeff = reactions(:, 1);
-reac2_coeff = reactions(:, 2);
+reac1_i = reactions(:, 1);
+reac2_i = reactions(:, 2);
 
-prod1_coeff = reactions(:, 3);
-prod2_coeff = reactions(:, 4);
+prod1_i = reactions(:, 3);
+prod2_i = reactions(:, 4);
 
 delta_G_standard = reactions(:, 5);
 
@@ -102,7 +95,7 @@ function [so] = source(x, u)
     prod2 = u(prod2_i);
     
     % compute the actual delta G
-    ln_Q = prod1_coeff .* prod1 + prod2_coeff .* prod2 - reac1_coeff .* reac1 - reac2_coeff .* reac2;
+    ln_Q = prod1 + prod2 - reac1 - reac2;
     assert(~any(isnan(ln_Q)))
 
     delta_G = delta_G_standard + RT * ln_Q;
@@ -112,8 +105,8 @@ function [so] = source(x, u)
     delta_G(delta_G > 0.0) = 0.0;
     assert(all(delta_G <= 0.0))
 
-    rate = -rate_constant * delta_G;
-    %rate = rate_constant * (reac1_coeff .* exp10(reac1) + reac2_coeff .* exp10(reac1)) .* (-delta_G);
+    %rate = -rate_constant * delta_G;
+    rate = rate_constant * min(exp10(reac1), exp10(reac1)) .* (-delta_G);
     %rate(photosynthesis_i) = rate(photosynthesis_i) * exp(-x / photon_depth_scale); 
     
     assert(all(rate >= 0.0))
@@ -130,10 +123,10 @@ function [so] = source(x, u)
 
     % add rates to species, converting to log domains as they go by
     % dividing by the concentrations
-    so(reac1_i) = so(reac1_i) - reac1_coeff .* rate;
-    so(reac2_i) = so(reac2_i) - reac2_coeff .* rate;
-    so(prod1_i) = so(prod1_i) + prod1_coeff .* rate;
-    so(prod2_i) = so(prod2_i) + prod2_coeff .* rate;
+    so(reac1_i) = so(reac1_i) - rate;
+    so(reac2_i) = so(reac2_i) - rate;
+    so(prod1_i) = so(prod1_i) + rate;
+    so(prod2_i) = so(prod2_i) + rate;
 
     % photosynthesis
     so([s('O') s('C0')]) = so([s('O') s('C0')]) + photo_rate_constant * exp(-x / photon_depth_scale);
@@ -164,10 +157,10 @@ function [c, f, so] = pdefun(x, t, u, dudx)
     %'after source and exp added'
     so = source(x, u);
     %'done adding'
-    t;
+    t
     assert(~any(isnan(so)))
     assert(all(isfinite(so)))
-    assert(all(abs(so) < 10))
+    %assert(all(abs(so) < 10))
     
     % ignore any changes to water or photon concentration
     so(ignored_species) = 0.0;

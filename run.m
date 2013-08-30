@@ -1,14 +1,14 @@
 function [sol] = run()
 
 % constants
-diffusion_constant = 0.0;
+diffusion_constant = 1e3;
 RT = 2.49; % 8.3 J K^-1 mol^-1 * 300 K = 2.49 kJ mol^-1
 rate_constant = 1.0;
-faraday_constant = 96.5; % 96.4 kJ volt^-1 mol^-1
+%faraday_constant = 96.5; % 96.4 kJ volt^-1 mol^-1
 
 % assertive parameters
 photon_depth_scale = 0.5; % 1/e distance for photosynthesis (meters)
-photo_delta_G_standard = -500;
+photo_delta_G_standard = -100;
 
 % methanogenesis parameters
 mg_rate_constant = 1.0;
@@ -19,8 +19,8 @@ assert(metabolic_cutoff <= 0.0)
 
 % simulation parameters
 x_max = 15;
-x_resolution = 10;
-t_max = 100;
+x_resolution = 100;
+t_max = 1.0;
 t_resolution = 10;
 minimum_concentration = 1e-9;
 
@@ -29,6 +29,7 @@ minimum_concentration = 1e-9;
 
 reactions = [
     % photosynthesis
+    % C(IV) -> 2O(0) + C(0)
     1, s('C(IV)'), 0, s('water'), 2, s('O(0)'), 1, s('C(0)'), photo_delta_G_standard
     
     % denitrification
@@ -38,6 +39,10 @@ reactions = [
     % ammonia oxidation
     % O(0) + 0.25N(-III) -> water + 0.25N(V): delta Go  = 1.505088e-04
     1, s('N(-III)'), 4, s('O(0)'), 1, s('N(V)'), 1, s('water'), -81
+    
+    % methanogenesis
+    % C(IV) -> C(-IV)
+    1, s('C(IV)'), 0, s('water'), 1, s('C(IV)'), 0, s('water'), -8.3
 
 ];
 n_reactions = n_rows(reactions);
@@ -53,7 +58,8 @@ function [u] = icfun(x)
     % photon density decays exponentially
     %u(s('photons')) = exp(-x / photon_depth_scale);
     %u(s('O(0)')) = 10e-6 * u(s('photons'));
-    u(s('O(0)')) = 10e-6;
+    %u(s('O(0)')) = 10e-6 * exp(-x / photon_depth_scale) + minimum_concentration;
+    u(s('O(0)')) = minimum_concentration;
     
     u(s('Fe(II)')) = 150e-6;
     u(s('Fe(III)')) = 10e-6;
@@ -64,7 +70,7 @@ function [u] = icfun(x)
     u(s('S(VI)')) = 100e-6;
     u(s('S(-II)')) = 10e-6;
     
-    u(s('N(V)')) = 10e-6;
+    u(s('N(V)')) = 1e-6;
     u(s('N(-III)')) = 100e-6;
     
     % convert to log domain
@@ -135,10 +141,10 @@ function [so] = source(x, u)
     % decrease all reactions by the metabolic cutoff
     %rate = rate_constant * reac1 .^ reac1_coeff .* reac2 .^ reac2_coeff .* max(0, -delta_G + metabolic_cutoff);
     %rate = -rate_constant * delta_G;
-    rate = rate_constant * (reac1_coeff .* exp10(reac1) + reac2_coeff .* exp10(reac1)) .* (-delta_G)
+    rate = rate_constant * (reac1_coeff .* exp10(reac1) + reac2_coeff .* exp10(reac1)) .* (-delta_G);
             
     % if this is photosynthesis, also check for the number of photons
-    rate(photosynthesis_i) = rate(photosynthesis_i) * exp(-x / photon_depth_scale)
+    rate(photosynthesis_i) = rate(photosynthesis_i) * exp(-x / photon_depth_scale);
     assert(all(rate >= 0.0))
     assert(all(isfinite(rate)))
 
@@ -149,7 +155,7 @@ function [so] = source(x, u)
     so(prod1_i) = so(prod1_i) + prod1_coeff .* rate;
     so(prod2_i) = so(prod2_i) + prod2_coeff .* rate;
     
-    so = so'
+    so = so';
 end
 
 
@@ -166,26 +172,21 @@ function [c, f, so] = pdefun(x, t, u, dudx)
     assert(~any(isnan(u)))
     assert(~any(isnan(dudx)))
     
+    eu = exp10(u);
+    
     % coupling constant is 1 for each species
-    c = ones(n_species, 1);
+    c = log(10) * eu;
 
     % diffusion term is the same for all species except photons and water
-    f = diffusion_constant * dudx;
+    f = diffusion_constant * log(10) * eu .* dudx;
     f(ignored_species) = 0.0;
     assert(all(isfinite(f)))
-    
-    % add the second half of the diffusion terms using the source term
-    so = diffusion_constant * dudx' .^ 2;
-    so(ignored_species) = 0.0;
 
     % compute the source terms from the previously defined function
-    'from before'
-    so
-    'exp10'
-    exp10(u')
-    'after source and exp added'
-    so = so + source(x, u) ./ exp10(u')
-    'done adding'
+    %'after source and exp added'
+    so = source(x, u);
+    %'done adding'
+    
     assert(~any(isnan(so)))
     assert(all(isfinite(so)))
     assert(all(abs(so) < 10))
