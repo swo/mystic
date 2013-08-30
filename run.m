@@ -1,88 +1,94 @@
 function [sol] = run()
 
 % constants
-diffusion_constant = 1e3;
+diffusion_constant = 1.0;
 RT = 2.49; % 8.3 J K^-1 mol^-1 * 300 K = 2.49 kJ mol^-1
-rate_constant = 1.0;
-%faraday_constant = 96.5; % 96.4 kJ volt^-1 mol^-1
+rate_constant = 1e-3;
+max_rate = 1e2;
 
-% assertive parameters
-photon_depth_scale = 0.5; % 1/e distance for photosynthesis (meters)
-photo_delta_G_standard = -100;
-
-% methanogenesis parameters
-mg_rate_constant = 1.0;
-mg_delta_G_modifier = 0.0; % accounts for the [H20]^2/[H2]^4 in Q
-
-metabolic_cutoff = 0.0; % Canfield's cutoff for useful metabolism; -20 kJ mol^-1
-assert(metabolic_cutoff <= 0.0)
+oxygen_constant = 10.0;
+carbon_constant = 10.0;
 
 % simulation parameters
 x_max = 15;
-x_resolution = 100;
-t_max = 1.0;
-t_resolution = 10;
-minimum_concentration = 1e-9;
+x_resolution = 10;
+t_max = 10.0;
+t_resolution = 50;
 
 % species list
 [s, species, n_species] = species_map();
 
-reactions = [
-    % photosynthesis
-    % C(IV) -> 2O(0) + C(0)
-    1, s('C(IV)'), 0, s('water'), 2, s('O(0)'), 1, s('C(0)'), photo_delta_G_standard
-    
-    % denitrification
-    % N(V) + 2.0C(0) -> N(-III) + 2.0C(IV): delta Go  = -3.361363e-04
-    2.0, s('C(0)'), 1.0, s('N(V)'), 2.0, s('C(IV)'), 1.0, s('N(-III)'), -364
-    
-    % ammonia oxidation
-    % O(0) + 0.25N(-III) -> water + 0.25N(V): delta Go  = 1.505088e-04
-    1, s('N(-III)'), 4, s('O(0)'), 1, s('N(V)'), 1, s('water'), -81
-    
-    % methanogenesis
-    % C(IV) -> C(-IV)
-    1, s('C(IV)'), 0, s('water'), 1, s('C(IV)'), 0, s('water'), -8.3
+biotic_rxns = [
+    % respiration
+    s('C'), s('O'), s(''), s(''), -100.0
+    s('C'), s('N+'), s('N-'), s(''), -80.0
+    s('C'), s('Fe+'), s('Fe-'), s(''), -60.0
+    s('C'), s('S+'), s('S-'), s(''), -40.0
 
+    % oxidations
+    s('O'), s('N-'), s('N+'), s(''), -50.0
+    s('O'), s('S-'), s('S+'), s(''), -50.0
 ];
-n_reactions = n_rows(reactions);
-photosynthesis_i = 1;   % index of photosynthesis reaction
+
+abiotic_rxns = [
+    % iron oxidation
+    s('O'), s('Fe-'), s('Fe+'), s(''), -100.0
+];
+
+n_biotic_rxns = n_rows(biotic_rxns);
+n_abiotic_rxns = n_rows(abiotic_rxns);
+
+% grab the unchanging columns from the reaction matrix
+bio_reac1_i = biotic_rxns(:, 1);
+bio_reac2_i = biotic_rxns(:, 2);
+bio_prod1_i = biotic_rxns(:, 3);
+bio_prod2_i = biotic_rxns(:, 4);
+bio_delta_Go = biotic_rxns(:, 5);
+
+abio_reac1_i = abiotic_rxns(:, 1);
+abio_reac2_i = abiotic_rxns(:, 2);
+abio_prod1_i = abiotic_rxns(:, 3);
+abio_prod2_i = abiotic_rxns(:, 4);
+abio_delta_Go = abiotic_rxns(:, 5);
 
 % initial conditions
 function [u] = icfun(x)
-    u = repmat(minimum_concentration, n_species, 1);
-        
-    % make water so it doesn't enter the photosynthesis ln Q
-    u(s('water')) = 1.0;
+    u = zeros(n_species, 1);
 
-    % photon density decays exponentially
-    %u(s('photons')) = exp(-x / photon_depth_scale);
-    %u(s('O(0)')) = 10e-6 * u(s('photons'));
-    %u(s('O(0)')) = 10e-6 * exp(-x / photon_depth_scale) + minimum_concentration;
-    u(s('O(0)')) = minimum_concentration;
-    
-    u(s('Fe(II)')) = 150e-6;
-    u(s('Fe(III)')) = 10e-6;
-    
-    u(s('C(IV)')) = 1500e-6;
-    u(s('C(-IV)')) = 10e-6;
-    
-    u(s('S(VI)')) = 100e-6;
-    u(s('S(-II)')) = 10e-6;
-    
-    u(s('N(V)')) = 1e-6;
-    u(s('N(-III)')) = 100e-6;
-    
-    % convert to log domain
-    u = log10(u);
+    % null species is 1.0
+    u(s('')) = 1.0;
+
+    u(s('C')) = 10.0;
+    u(s('O')) = 10.0;
+
+    u(s('N+')) = 100.0;
+    u(s('N-')) = 100.0;
+
+    u(s('Fe+')) = 150.0;
+    u(s('Fe-')) = 10.0;
+
+    u(s('S+')) = 100.0;
+    u(s('S-')) = 10.0;
 end
 
 % boundary conditions
-function [pl, ql, pr, qr] = bcfun(xl, ul, xr, ur, t)
+oc_i = [s('O'), s('C')];
+function [pl, ql, pr, qr] = bcfun(xl, ul, xr, ur, t)    
+    % mostly require that there is no flux
     pl = zeros(n_species, 1);
     ql = ones(n_species, 1);
     pr = zeros(n_species, 1);
     qr = ones(n_species, 1);
+
+    % except for oxygen and carbon, which are kept at a constant level
+    pl(s('O')) = ul(s('O')) - oxygen_constant;
+    pl(s('C')) = ul(s('C')) - carbon_constant;
+    ql(oc_i) = 0.0;
+    qr(oc_i) = 0.0;
+    
+    % and zero at the bottom of the lake
+    pr(s('O')) = ur(s('O'));
+    pr(s('C')) = ur(s('C'));
 end
 
 % computed simulation parameters
@@ -91,119 +97,63 @@ tspan = linspace(0, t_max, t_resolution);
 
 
 % -- source term --
-% grab the unchanging columns from the reaction matrix
-reac1_coeff = reactions(:, 1);
-reac1_i = reactions(:, 2);
-reac2_coeff = reactions(:, 3);
-reac2_i = reactions(:, 4);
-
-prod1_coeff = reactions(:, 5);
-prod1_i = reactions(:, 6);
-prod2_coeff = reactions(:, 7);
-prod2_i = reactions(:, 8);
-
-delta_G_standard = reactions(:, 9);
-
 function [so] = source(x, u)
     %SOURCE compute the fluxes from the concentration vector u
     so = zeros(length(u), 1);
 
     % column column vectors of concentrations
-    reac1 = u(reac1_i);
-    reac2 = u(reac2_i);
-    prod1 = u(prod1_i);
-    prod2 = u(prod2_i);
+    bio_reac1 = max(0.0, u(bio_reac1_i));
+    bio_reac2 = max(0.0, u(bio_reac2_i));
+    abio_reac1 = max(0.0, u(abio_reac1_i));
+    abio_reac2 = max(0.0, u(abio_reac2_i));
+
+    bio_rates = rate_constant * bio_reac1 .* bio_reac2 .* (-bio_delta_Go);
+    abio_rates = rate_constant * abio_reac1 .* abio_reac2 .* (-abio_delta_Go);
+
+    % enforce the maximum rate for biotic reactions
+    if sum(bio_rates) > max_rate
+        bio_rates = bio_rates * max_rate / sum(bio_rates);
+    end
     
-    % compute the actual delta G
-    ln_Q = prod1_coeff .* prod1 + prod2_coeff .* prod2 - reac1_coeff .* reac1 - reac2_coeff .* reac2;
-    if any(isnan(ln_Q))
-        u
-        prod1_coeff
-        prod1
-        prod2_coeff
-        prod2
-        reac1_coeff
-        reac1
-        reac2_coeff
-        reac2
-    end
-    assert(~any(isnan(ln_Q)))
-    delta_G = delta_G_standard + RT * ln_Q;
-    assert(~any(isnan(delta_G)))
+    assert(all(abio_rates >= 0.0))
+    assert(all(bio_rates >= 0.0))
+    
+    % add rates to species
+    so(bio_reac1_i) = so(bio_reac1_i) - bio_rates;
+    so(bio_reac2_i) = so(bio_reac2_i) - bio_rates;
+    so(bio_prod1_i) = so(bio_prod1_i) + bio_rates;
+    so(bio_prod2_i) = so(bio_prod2_i) + bio_rates;
 
-    % ignore reactions that go backwards
-    delta_G(delta_G > 0.0) = 0.0;
-    if ~all(delta_G <= 0.0)
-        delta_G
-    end
-    assert(all(delta_G <= 0.0))
-
-    % decrease all reactions by the metabolic cutoff
-    %rate = rate_constant * reac1 .^ reac1_coeff .* reac2 .^ reac2_coeff .* max(0, -delta_G + metabolic_cutoff);
-    %rate = -rate_constant * delta_G;
-    rate = rate_constant * (reac1_coeff .* exp10(reac1) + reac2_coeff .* exp10(reac1)) .* (-delta_G);
-            
-    % if this is photosynthesis, also check for the number of photons
-    rate(photosynthesis_i) = rate(photosynthesis_i) * exp(-x / photon_depth_scale);
-    assert(all(rate >= 0.0))
-    assert(all(isfinite(rate)))
-
-    % add rates to species, converting to log domains as they go by
-    % dividing by the concentrations
-    so(reac1_i) = so(reac1_i) - reac1_coeff .* rate;
-    so(reac2_i) = so(reac2_i) - reac2_coeff .* rate;
-    so(prod1_i) = so(prod1_i) + prod1_coeff .* rate;
-    so(prod2_i) = so(prod2_i) + prod2_coeff .* rate;
+    so(abio_reac1_i) = so(abio_reac1_i) - abio_rates;
+    so(abio_reac2_i) = so(abio_reac2_i) - abio_rates;
+    so(abio_prod1_i) = so(abio_prod1_i) + abio_rates;
+    so(abio_prod2_i) = so(abio_prod2_i) + abio_rates;
     
     so = so';
 end
 
 
 % -- function for computing the instantaneous differential equations --
-ignored_species = [s('water')];
 function [c, f, so] = pdefun(x, t, u, dudx)
-    if ~all(isfinite(dudx))
-        u
-        dudx
-        t
-    end
-    assert(all(isfinite(dudx)))
-    assert(all(isfinite(u)))
-    assert(~any(isnan(u)))
-    assert(~any(isnan(dudx)))
-    
-    eu = exp10(u);
+    %assert(all(u > 0.0))
     
     % coupling constant is 1 for each species
-    c = log(10) * eu;
+    c = ones(n_species, 1);
 
     % diffusion term is the same for all species except photons and water
-    f = diffusion_constant * log(10) * eu .* dudx;
-    f(ignored_species) = 0.0;
-    assert(all(isfinite(f)))
+    f = diffusion_constant * dudx;
 
     % compute the source terms from the previously defined function
-    %'after source and exp added'
     so = source(x, u);
-    %'done adding'
-    
-    assert(~any(isnan(so)))
-    assert(all(isfinite(so)))
-    assert(all(abs(so) < 10))
-    
-    % ignore any changes to water or photon concentration
-    so(ignored_species) = 0.0;
+
+    % keep the null species constant
+    f(s('')) = 0.0;
+    so(s('')) = 0.0;
 end
 
 % m=0 -> slab geometry, no cylindrical or spherical
 m = 0;
 
-use_options = 0;
-if use_options
-    options = odeset('RelTol', 1e-3 * minimum_concentration, 'MaxStep', 1e-4);
-    sol = pdepe(m, @pdefun, @icfun, @bcfun, xmesh, tspan, options);
-else
-    sol = pdepe(m, @pdefun, @icfun, @bcfun, xmesh, tspan);
-end
+sol = pdepe(m, @pdefun, @icfun, @bcfun, xmesh, tspan);
 
 end
