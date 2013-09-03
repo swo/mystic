@@ -8,17 +8,17 @@ max_rate = 1e6;
 
 % simulation parameters
 n_x = 5;
-t_max = 1e6;
+t_max = 1e8;
 
 % species list
 [s, species, n_species] = species_map();
 
 biotic_rxns = [
     % respiration
-    s('C'), s('O'), s(''), s(''), -10.0
-    s('C'), s('N+'), s('N-'), s('C'), -80.0
-    s('C'), s('Fe+'), s('Fe-'), s('C'), -60.0
-    s('C'), s('S+'), s('S-'), s('C'), -40.0
+    %s('C'), s('O'), s(''), s(''), -10.0
+    s('C'), s('N+'), s('N-'), s(''), -80.0
+    s('C'), s('Fe+'), s('Fe-'), s(''), -60.0
+    s('C'), s('S+'), s('S-'), s(''), -40.0
 
     % oxidations
     s('O'), s('N-'), s('N+'), s(''), -200.0
@@ -32,8 +32,8 @@ abiotic_rxns = [
 ];
 
 sources = [
-    s('O'), 100.0, 1
-    s('C'), 1000.0, 1
+    s('O'), 2000.0, 1
+    s('C'), 2000.0, 1
 ];
 
 %precipitating_species = [s('Fe+')];
@@ -47,14 +47,14 @@ concs0(:, s('')) = 1.0;
 concs0(:, s('C')) = 10.0;
 concs0(:, s('O')) = 5.0;
 
-concs0(:, s('N+')) = 100.0;
-concs0(:, s('N-')) = 100.0;
+concs0(:, s('N+')) = 10.0;
+concs0(:, s('N-')) = 10.0;
 
 %concs0(:, s('Fe+')) = 100.0;
 %concs0(:, s('Fe-')) = 100.0;
 
-%concs0(:, s('S+')) = 100.0;
-%concs0(:, s('S-')) = 100.0;
+concs0(:, s('S+')) = 100.0;
+concs0(:, s('S-')) = 100.0;
 
 
 % compute internal parameters
