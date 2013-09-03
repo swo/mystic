@@ -4,55 +4,57 @@ function [t, y] = run()
 diffusion_constant = 1.0;
 precipitation_constant = 1.0 * diffusion_constant;
 rate_constant = 1e-3;
-max_rate = 1e2;
+max_rate = 1e6;
 
 % simulation parameters
 n_x = 5;
-t_max = 1.0;
+t_max = 1e6;
 
 % species list
 [s, species, n_species] = species_map();
 
 biotic_rxns = [
     % respiration
-    s('C'), s('O'), s(''), s(''), -100.0
-    s('C'), s('N+'), s('N-'), s(''), -80.0
-    s('C'), s('Fe+'), s('Fe-'), s(''), -60.0
-    s('C'), s('S+'), s('S-'), s(''), -40.0
+    s('C'), s('O'), s(''), s(''), -10.0
+    s('C'), s('N+'), s('N-'), s('C'), -80.0
+    s('C'), s('Fe+'), s('Fe-'), s('C'), -60.0
+    s('C'), s('S+'), s('S-'), s('C'), -40.0
 
     % oxidations
-    s('O'), s('N-'), s('N+'), s(''), -50.0
-    s('O'), s('S-'), s('S+'), s(''), -50.0
+    s('O'), s('N-'), s('N+'), s(''), -200.0
+    s('O'), s('S-'), s('S+'), s(''), -200.0
 ];
 
 abiotic_rxns = [
     % iron oxidation
-    s('O'), s('Fe-'), s('Fe+'), s(''), -100.0
+    s('O'), s('Fe-'), s('Fe+'), s(''), -200.0
+    %s(''), s(''), s(''), s(''), -200.0
 ];
 
 sources = [
-    s('O'), 10.0, 1
-    s('C'), 10.0, 1
+    s('O'), 100.0, 1
+    s('C'), 1000.0, 1
 ];
 
-precipitating_species = [s('Fe+')];
+%precipitating_species = [s('Fe+')];
+precipitating_species = [];
 
 diffusing_species = setdiff(1: n_species, precipitating_species);
 
 % initialize the lake
 concs0 = zeros(n_x, n_species);
 concs0(:, s('')) = 1.0;
-concs0(:, s('C')) = 5.0;
+concs0(:, s('C')) = 10.0;
 concs0(:, s('O')) = 5.0;
 
 concs0(:, s('N+')) = 100.0;
 concs0(:, s('N-')) = 100.0;
 
-concs0(:, s('Fe+')) = 100.0;
-concs0(:, s('Fe-')) = 100.0;
+%concs0(:, s('Fe+')) = 100.0;
+%concs0(:, s('Fe-')) = 100.0;
 
-concs0(:, s('S+')) = 100.0;
-concs0(:, s('S-')) = 100.0;
+%concs0(:, s('S+')) = 100.0;
+%concs0(:, s('S-')) = 100.0;
 
 
 % compute internal parameters
@@ -70,6 +72,7 @@ abio_reac2_i = abiotic_rxns(:, 2);
 abio_prod1_i = abiotic_rxns(:, 3);
 abio_prod2_i = abiotic_rxns(:, 4);
 abio_delta_Go = abiotic_rxns(:, 5)';
+
 
 source_species = sources(:, 1);
 source_rates = sources(:, 2);
@@ -95,24 +98,31 @@ function [fluxes] = flux(~, concs_vector)
         abio_reac1 = concs(x, abio_reac1_i);
         abio_reac2 = concs(x, abio_reac2_i);
 
-        bio_rates = rate_constant * bio_reac1 .* bio_reac2 .* (-bio_delta_Go);
+        bio_rates = max(0.0, rate_constant * bio_reac1 .* bio_reac2 .* (-bio_delta_Go));
         abio_rates = rate_constant * abio_reac1 .* abio_reac2 .* (-abio_delta_Go);
+        
+        if any(bio_rates < 0.0)
+            concs
+            bio_rates
+        end
+        %assert(all(bio_rates >= -1e-6))
 
         % enforce the maximum rate for biotic reactions
         if sum(bio_rates) > max_rate
+            'over max rate'
             bio_rates = bio_rates * max_rate / sum(bio_rates);
         end
         
         % add rates to species
-        fluxes(x, bio_reac1_i) = fluxes(x, bio_reac1_i) - bio_rates;
-        fluxes(x, bio_reac2_i) = fluxes(x, bio_reac2_i) - bio_rates;
-        fluxes(x, bio_prod1_i) = fluxes(x, bio_prod1_i) + bio_rates;
-        fluxes(x, bio_prod2_i) = fluxes(x, bio_prod2_i) + bio_rates;
-
-        fluxes(x, abio_reac1_i) = fluxes(x, abio_reac1_i) - abio_rates;
-        fluxes(x, abio_reac2_i) = fluxes(x, abio_reac2_i) - abio_rates;
-        fluxes(x, abio_prod1_i) = fluxes(x, abio_prod1_i) + abio_rates;
-        fluxes(x, abio_prod2_i) = fluxes(x, abio_prod2_i) + abio_rates;
+        fluxes(x, :) = fluxes(x, :) - accumarray(bio_reac1_i, bio_rates, [n_species, 1])';
+        fluxes(x, :) = fluxes(x, :) - accumarray(bio_reac2_i, bio_rates, [n_species, 1])';
+        fluxes(x, :) = fluxes(x, :) + accumarray(bio_prod1_i, bio_rates, [n_species, 1])';
+        fluxes(x, :) = fluxes(x, :) + accumarray(bio_prod2_i, bio_rates, [n_species, 1])';
+        
+        fluxes(x, :) = fluxes(x, :) - accumarray(abio_reac1_i, abio_rates, [n_species, 1])';
+        fluxes(x, :) = fluxes(x, :) - accumarray(abio_reac2_i, abio_rates, [n_species, 1])';
+        fluxes(x, :) = fluxes(x, :) + accumarray(abio_prod1_i, abio_rates, [n_species, 1])';
+        fluxes(x, :) = fluxes(x, :) + accumarray(abio_prod2_i, abio_rates, [n_species, 1])';
 
         % -- diffusion --
         if x > 1
@@ -124,17 +134,19 @@ function [fluxes] = flux(~, concs_vector)
             fluxes(x, diffusing_species) = fluxes(x, diffusing_species) + diffusion_constant * (concs(x + 1, diffusing_species) - concs(x, diffusing_species));
         end
 
-        % nullify fluxes on null species
-        fluxes(:, s('')) = 0.0;
     end % for x
     
-    fluxes = reshape(fluxes, n_total, 1);
+    % nullify fluxes on null species
+    fluxes(:, s('')) = 0.0;
+    
+    
+    fluxes = reshape(fluxes, [n_total, 1]);
 end
 
 
 % -- run the ode solver --
 options = odeset('NonNegative', 1: n_total);
-concs0_vector = reshape(concs0, [1 n_total]);
+concs0_vector = reshape(concs0, [n_total, 1]);
 [t, y] = ode15s(@flux, [0 t_max], concs0_vector, options);
 
 [n_time_slices, ~] = size(y);
