@@ -4,56 +4,60 @@ function [t, y] = run()
 diffusion_constant = 1.0;
 precipitation_constant = 1.0 * diffusion_constant;
 rate_constant = 1e-3;
-max_rate = 1e6;
+max_rate = 1e12;
 
 % simulation parameters
-n_x = 5;
-t_max = 1e8;
+n_x = 6;
+t_max = 1e3;
 
 % species list
-[s, species, n_species] = species_map();
+[s, ~, n_species] = species_map();
 
 biotic_rxns = [
     % respiration
     %s('C'), s('O'), s(''), s(''), -10.0
-    s('C'), s('N+'), s('N-'), s(''), -80.0
-    s('C'), s('Fe+'), s('Fe-'), s(''), -60.0
+    s('C'), s('N+'), s('N-'), s(''), -350.0
+    s('C'), s('Fe+'), s('Fe-'), s(''), -250.0
     s('C'), s('S+'), s('S-'), s(''), -40.0
 
     % oxidations
-    s('O'), s('N-'), s('N+'), s(''), -200.0
-    s('O'), s('S-'), s('S+'), s(''), -200.0
+    s('O'), s('N-'), s('N+'), s(''), -300.0
+    s('O'), s('S-'), s('S+'), s(''), -300.0
+    
+    % fermentation
+    %s('C'), s(''), s(''), s(''), -1.0
 ];
 
 abiotic_rxns = [
     % iron oxidation
-    s('O'), s('Fe-'), s('Fe+'), s(''), -200.0
+    s('O'), s('Fe-'), s('Fe+'), s(''), -1e4
     %s(''), s(''), s(''), s(''), -200.0
 ];
 
+photo = 1e5;
 sources = [
-    s('O'), 2000.0, 1
-    s('C'), 2000.0, 1
+    s('O'), photo, 1
+    s('C'), photo, 1
 ];
 
-%precipitating_species = [s('Fe+')];
-precipitating_species = [];
+precipitating_species = [s('Fe+')];
+%precipitating_species = [];
 
 diffusing_species = setdiff(1: n_species, precipitating_species);
 
 % initialize the lake
 concs0 = zeros(n_x, n_species);
 concs0(:, s('')) = 1.0;
-concs0(:, s('C')) = 10.0;
-concs0(:, s('O')) = 5.0;
+concs0(:, s('C')) = 0.0;
+concs0(:, s('O')) = 0.0;
 
-concs0(:, s('N+')) = 10.0;
-concs0(:, s('N-')) = 10.0;
+concs0(:, s('N+')) = 0.0;
+concs0(:, s('N-')) = 100.0;
 
-%concs0(:, s('Fe+')) = 100.0;
-%concs0(:, s('Fe-')) = 100.0;
+concs0(:, s('Fe+')) = 0.0;
+concs0(:, s('Fe-')) = 100.0;
 
-concs0(:, s('S+')) = 100.0;
+concs0(:, s('S+')) = 0.0;
 concs0(:, s('S-')) = 100.0;
 
 
@@ -109,7 +113,7 @@ function [fluxes] = flux(~, concs_vector)
 
         % enforce the maximum rate for biotic reactions
         if sum(bio_rates) > max_rate
-            'over max rate'
+            %'over max rate'
             bio_rates = bio_rates * max_rate / sum(bio_rates);
         end
         

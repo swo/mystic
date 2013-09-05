@@ -1,7 +1,8 @@
 s = species_map();
 [t, y] = run();
 
-to_show = {'O', 'C', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-'};
+%to_show = {'O', 'C', 'N+', 'N-', 'S+', 'S-'};
+to_show = {'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-'};
 idx = cellfun(@(x) s(x), to_show);
 
 clf;
@@ -17,6 +18,7 @@ xlabel('depth');
 ylabel('time');
 zlabel('concentration');
 
-legend('O', 'C', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-');
+%legend('O', 'C', 'N+', 'N-', 'S+', 'S-');
+legend('N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-');
 
 hold off;
