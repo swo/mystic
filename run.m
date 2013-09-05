@@ -2,13 +2,14 @@ function [t, y] = run()
 
 % constants
 diffusion_constant = 1.0;
-precipitation_constant = 1.0 * diffusion_constant;
+precipitation_constant = 0.2;
+%precipitation_constant = 1.0 * diffusion_constant;
 rate_constant = 1e-3;
 max_rate = 1e12;
 
 % simulation parameters
 n_x = 6;
-t_max = 1e3;
+t_max = 1.0;
 
 % species list
 [s, ~, n_species] = species_map();
@@ -31,7 +32,7 @@ biotic_rxns = [
 abiotic_rxns = [
     % iron oxidation
     s('O'), s('Fe-'), s('Fe+'), s(''), -1e4
-    %s(''), s(''), s(''), s(''), -200.0
+    s(''), s(''), s(''), s(''), -200.0
 ];
 
 photo = 1e5;
@@ -54,14 +55,19 @@ concs0(:, s('O')) = 0.0;
 concs0(:, s('N+')) = 0.0;
 concs0(:, s('N-')) = 100.0;
 
-concs0(:, s('Fe+')) = 0.0;
-concs0(:, s('Fe-')) = 100.0;
+concs0(:, s('Fe+')) = 100.0;
+concs0(:, s('Fe-')) = 0.0;
 
 concs0(:, s('S+')) = 0.0;
 concs0(:, s('S-')) = 100.0;
 
 
 % compute internal parameters
+
+% make new precipitation values
+D = diffusion_constant;
+D_plus = (1.0 + precipitation_constant) * D;
+D_minus = (1.0 - precipitation_constant) * D;
 
 % grab the unchanging columns from the reaction matrix
 % delta_Go is transposed so it can fit with row vectors of concentrations
@@ -127,15 +133,17 @@ function [fluxes] = flux(~, concs_vector)
         fluxes(x, :) = fluxes(x, :) - accumarray(abio_reac2_i, abio_rates, [n_species, 1])';
         fluxes(x, :) = fluxes(x, :) + accumarray(abio_prod1_i, abio_rates, [n_species, 1])';
         fluxes(x, :) = fluxes(x, :) + accumarray(abio_prod2_i, abio_rates, [n_species, 1])';
+        
 
-        % -- diffusion --
+        % -- diffusion --        
         if x > 1
             fluxes(x, diffusing_species) = fluxes(x, diffusing_species) + diffusion_constant * (concs(x - 1, diffusing_species) - concs(x, diffusing_species));
-            fluxes(x, precipitating_species) = fluxes(x, precipitating_species) + precipitation_constant * concs(x - 1, precipitating_species);
+            fluxes(x, precipitating_species) = fluxes(x, precipitating_species) + D_plus * concs(x - 1, precipitating_species) - D_minus * concs(x, precipitating_species);
         end
 
         if x < n_x
             fluxes(x, diffusing_species) = fluxes(x, diffusing_species) + diffusion_constant * (concs(x + 1, diffusing_species) - concs(x, diffusing_species));
+            fluxes(x, precipitating_species) = fluxes(x, precipitating_species) - D_plus * concs(x, precipitating_species) + D_minus * concs(x + 1, precipitating_species);
         end
 
     end % for x
@@ -143,6 +151,7 @@ function [fluxes] = flux(~, concs_vector)
     % nullify fluxes on null species
     fluxes(:, s('')) = 0.0;
     
+    fluxes(:, [s('Fe-') s('Fe+') ])
     
     fluxes = reshape(fluxes, [n_total, 1]);
 end
