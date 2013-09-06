@@ -1,8 +1,18 @@
-s = species_map();
-[t, y] = run();
+run_it = 1;
+show_o = 1;
 
-%to_show = {'O', 'C', 'N+', 'N-', 'S+', 'S-'};
-to_show = {'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-'};
+s = species_map();
+
+if run_it
+    [t, y, flux, bio_rates, abio_rates] = run();
+end
+
+if show_o
+    to_show = {'O', 'C', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-'};
+else
+    to_show = {'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-'};
+end
+
 idx = cellfun(@(x) s(x), to_show);
 
 clf;
@@ -18,7 +28,14 @@ xlabel('depth');
 ylabel('time');
 zlabel('concentration');
 
-%legend('O', 'C', 'N+', 'N-', 'S+', 'S-');
-legend('N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-');
+if show_o
+    legend('O', 'C', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-');
+else
+    legend('N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-');
+end
 
 hold off;
+
+flux
+bio_rates
+abio_rates

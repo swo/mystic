@@ -1,15 +1,19 @@
-function [t, y] = run()
+function [t, y, flux_out, bio_rates_out, abio_rates_out] = run()
 
 % constants
-diffusion_constant = 1.0;
-precipitation_constant = 0.2;
+diffusion_constant_per_compartment = 5.0;
+precipitation_constant = 0.1;
 %precipitation_constant = 1.0 * diffusion_constant;
 rate_constant = 1e-3;
 max_rate = 1e12;
 
+fixed_oxygen_level = 200.0;
+fixed_oxygen_diffusion = 1e2;
+
 % simulation parameters
-n_x = 6;
-t_max = 1.0;
+n_x = 20;
+t_max = 1e5;
+diffusion_constant = diffusion_constant_per_compartment * n_x;
 
 % species list
 [s, ~, n_species] = species_map();
@@ -22,8 +26,11 @@ biotic_rxns = [
     s('C'), s('S+'), s('S-'), s(''), -40.0
 
     % oxidations
-    s('O'), s('N-'), s('N+'), s(''), -300.0
-    s('O'), s('S-'), s('S+'), s(''), -300.0
+    s('O'), s('N-'), s('N+'), s(''), -500.0
+    s('O'), s('S-'), s('S+'), s(''), -500.0
+    
+    % iron oxidation on nitrate
+    %s('N+'), s('Fe-'), s('Fe+'), s('N-'), -200.0
     
     % fermentation
     %s('C'), s(''), s(''), s(''), -1.0
@@ -31,17 +38,16 @@ biotic_rxns = [
 
 abiotic_rxns = [
     % iron oxidation
-    s('O'), s('Fe-'), s('Fe+'), s(''), -1e4
-    s(''), s(''), s(''), s(''), -200.0
+    s('O'), s('Fe-'), s('Fe+'), s(''), -1e5
 ];
 
-photo = 1e5;
+photo = 0.0;
 sources = [
-    s('O'), photo, 1
-    s('C'), photo, 1
+    %s('O'), photo, 1
+    s('C'), 0, 1
 ];
 
-precipitating_species = [s('Fe+')];
+precipitating_species = [s('Fe+') s('C')];
 %precipitating_species = [];
 
 diffusing_species = setdiff(1: n_species, precipitating_species);
@@ -49,17 +55,17 @@ diffusing_species = setdiff(1: n_species, precipitating_species);
 % initialize the lake
 concs0 = zeros(n_x, n_species);
 concs0(:, s('')) = 1.0;
-concs0(:, s('C')) = 0.0;
+concs0(:, s('C')) = 100.0;
 concs0(:, s('O')) = 0.0;
 
-concs0(:, s('N+')) = 0.0;
-concs0(:, s('N-')) = 100.0;
+concs0(:, s('N+')) = 50.0;
+concs0(:, s('N-')) = 50.0;
 
-concs0(:, s('Fe+')) = 100.0;
-concs0(:, s('Fe-')) = 0.0;
+concs0(:, s('Fe+')) = 50.0;
+concs0(:, s('Fe-')) = 50.0;
 
-concs0(:, s('S+')) = 0.0;
-concs0(:, s('S-')) = 100.0;
+concs0(:, s('S+')) = 50.0;
+concs0(:, s('S-')) = 50.0;
 
 
 % compute internal parameters
@@ -70,18 +76,21 @@ D_plus = (1.0 + precipitation_constant) * D;
 D_minus = (1.0 - precipitation_constant) * D;
 
 % grab the unchanging columns from the reaction matrix
+
 % delta_Go is transposed so it can fit with row vectors of concentrations
 bio_reac1_i = biotic_rxns(:, 1);
 bio_reac2_i = biotic_rxns(:, 2);
 bio_prod1_i = biotic_rxns(:, 3);
 bio_prod2_i = biotic_rxns(:, 4);
 bio_delta_Go = biotic_rxns(:, 5)';
+n_bio_rxns = length(bio_delta_Go);
 
 abio_reac1_i = abiotic_rxns(:, 1);
 abio_reac2_i = abiotic_rxns(:, 2);
 abio_prod1_i = abiotic_rxns(:, 3);
 abio_prod2_i = abiotic_rxns(:, 4);
 abio_delta_Go = abiotic_rxns(:, 5)';
+n_abio_rxns = length(abio_delta_Go);
 
 
 source_species = sources(:, 1);
@@ -92,24 +101,46 @@ source_idx = sub2ind([n_x, n_species], source_x, source_species);
 
 % -- flux function --
 n_total = n_x * n_species;
+
+function [bio_rates, abio_rates] = rates(concs_row)
+    bio_reac1 = concs_row(bio_reac1_i);
+    bio_reac2 = concs_row(bio_reac2_i);
+
+    abio_reac1 = concs_row(abio_reac1_i);
+    abio_reac2 = concs_row(abio_reac2_i);
+    
+    %size(bio_reac1)
+    %size(bio_reac2)
+    %size(bio_delta_Go)
+
+    bio_rates = max(0.0, rate_constant * bio_reac1 .* bio_reac2 .* (-bio_delta_Go));
+    abio_rates = rate_constant * abio_reac1 .* abio_reac2 .* (-abio_delta_Go);
+end 
+
+% twiddle because this is time-independent
 function [fluxes] = flux(~, concs_vector)
     concs = reshape(concs_vector, [n_x, n_species]);
     fluxes = zeros(n_x, n_species);
     
     % apply the sources
     fluxes(source_idx) = fluxes(source_idx) + source_rates;
-
+    
+    % apply the fixed oxygen term
+    %fluxes(1, [s('O') s('C')]) = fluxes(1, [s('O') s('C')]) + fixed_oxygen_diffusion * (fixed_oxygen_level - concs(1, [s('O') s('C')]));
+    fluxes(1, [s('O') s('C')]) = fluxes(1, [s('O') s('C')]) + fixed_oxygen_diffusion * (fixed_oxygen_level - concs(1, s('O')));
+    
     for x = 1: n_x
+        [bio_rates, abio_rates] = rates(concs(x, :))
         % -- reactions --
         % column column vectors of concentrations
-        bio_reac1 = concs(x, bio_reac1_i);
-        bio_reac2 = concs(x, bio_reac2_i);
+        %bio_reac1 = concs(x, bio_reac1_i);
+        %bio_reac2 = concs(x, bio_reac2_i);
 
-        abio_reac1 = concs(x, abio_reac1_i);
-        abio_reac2 = concs(x, abio_reac2_i);
+        %abio_reac1 = concs(x, abio_reac1_i);
+        %abio_reac2 = concs(x, abio_reac2_i);
 
-        bio_rates = max(0.0, rate_constant * bio_reac1 .* bio_reac2 .* (-bio_delta_Go));
-        abio_rates = rate_constant * abio_reac1 .* abio_reac2 .* (-abio_delta_Go);
+        %bio_rates = max(0.0, rate_constant * bio_reac1 .* bio_reac2 .* (-bio_delta_Go));
+        %abio_rates = rate_constant * abio_reac1 .* abio_reac2 .* (-abio_delta_Go);
         
         if any(bio_rates < 0.0)
             concs
@@ -134,7 +165,6 @@ function [fluxes] = flux(~, concs_vector)
         fluxes(x, :) = fluxes(x, :) + accumarray(abio_prod1_i, abio_rates, [n_species, 1])';
         fluxes(x, :) = fluxes(x, :) + accumarray(abio_prod2_i, abio_rates, [n_species, 1])';
         
-
         % -- diffusion --        
         if x > 1
             fluxes(x, diffusing_species) = fluxes(x, diffusing_species) + diffusion_constant * (concs(x - 1, diffusing_species) - concs(x, diffusing_species));
@@ -151,8 +181,6 @@ function [fluxes] = flux(~, concs_vector)
     % nullify fluxes on null species
     fluxes(:, s('')) = 0.0;
     
-    fluxes(:, [s('Fe-') s('Fe+') ])
-    
     fluxes = reshape(fluxes, [n_total, 1]);
 end
 
@@ -164,5 +192,15 @@ concs0_vector = reshape(concs0, [n_total, 1]);
 
 [n_time_slices, ~] = size(y);
 y = reshape(y, n_time_slices, n_x, n_species);
+
+y_vec = reshape(y(end, :, :), [n_total, 1]);
+flux_out = reshape(flux(0, y_vec), [n_x, n_species]);
+
+bio_rates_out = zeros(n_x, n_bio_rxns);
+abio_rates_out = zeros(n_x, n_abio_rxns);
+
+for x = 1: n_x
+    [a, b] = rates(squeeze(y(end, x, :))')
+end
 
 end
