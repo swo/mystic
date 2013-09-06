@@ -1,11 +1,11 @@
 function [t, y, flux_out, bio_rates_out, abio_rates_out] = run()
 
 % constants
-diffusion_constant_per_compartment = 5.0;
-precipitation_constant = 0.1;
+diffusion_constant_per_compartment = 6.0;
+precipitation_constant = 0.05;
 %precipitation_constant = 1.0 * diffusion_constant;
 rate_constant = 1e-3;
-max_rate = 1e12;
+max_rate = 5e2;
 
 fixed_oxygen_level = 200.0;
 fixed_oxygen_diffusion = 1e2;
@@ -30,15 +30,15 @@ biotic_rxns = [
     s('O'), s('S-'), s('S+'), s(''), -500.0
     
     % iron oxidation on nitrate
-    %s('N+'), s('Fe-'), s('Fe+'), s('N-'), -200.0
+    s('N+'), s('Fe-'), s('Fe+'), s('N-'), -200.0
     
     % fermentation
-    %s('C'), s(''), s(''), s(''), -1.0
+    s('C'), s(''), s(''), s(''), -10.0
 ];
 
 abiotic_rxns = [
     % iron oxidation
-    s('O'), s('Fe-'), s('Fe+'), s(''), -1e5
+    s('O'), s('Fe-'), s('Fe+'), s(''), -1e6
 ];
 
 photo = 0.0;
@@ -61,11 +61,11 @@ concs0(:, s('O')) = 0.0;
 concs0(:, s('N+')) = 50.0;
 concs0(:, s('N-')) = 50.0;
 
-concs0(:, s('Fe+')) = 50.0;
-concs0(:, s('Fe-')) = 50.0;
+concs0(:, s('Fe+')) = 30.0;
+concs0(:, s('Fe-')) = 30.0;
 
-concs0(:, s('S+')) = 50.0;
-concs0(:, s('S-')) = 50.0;
+concs0(:, s('S+')) = 70.0;
+concs0(:, s('S-')) = 70.0;
 
 
 % compute internal parameters
@@ -108,13 +108,18 @@ function [bio_rates, abio_rates] = rates(concs_row)
 
     abio_reac1 = concs_row(abio_reac1_i);
     abio_reac2 = concs_row(abio_reac2_i);
-    
-    %size(bio_reac1)
-    %size(bio_reac2)
-    %size(bio_delta_Go)
 
     bio_rates = max(0.0, rate_constant * bio_reac1 .* bio_reac2 .* (-bio_delta_Go));
     abio_rates = rate_constant * abio_reac1 .* abio_reac2 .* (-abio_delta_Go);
+    
+    % enforce the maximum rate for biotic reactions
+    if sum(bio_rates) > max_rate
+        %'over max rate'
+        bio_rates = bio_rates * max_rate / sum(bio_rates);
+    end
+    
+    assert(all(bio_rates >= -1e-6))
+    assert(all(abio_rates >= -1e-6))
 end 
 
 % twiddle because this is time-independent
@@ -130,7 +135,7 @@ function [fluxes] = flux(~, concs_vector)
     fluxes(1, [s('O') s('C')]) = fluxes(1, [s('O') s('C')]) + fixed_oxygen_diffusion * (fixed_oxygen_level - concs(1, s('O')));
     
     for x = 1: n_x
-        [bio_rates, abio_rates] = rates(concs(x, :))
+        [bio_rates, abio_rates] = rates(concs(x, :));
         % -- reactions --
         % column column vectors of concentrations
         %bio_reac1 = concs(x, bio_reac1_i);
@@ -146,13 +151,7 @@ function [fluxes] = flux(~, concs_vector)
             concs
             bio_rates
         end
-        %assert(all(bio_rates >= -1e-6))
 
-        % enforce the maximum rate for biotic reactions
-        if sum(bio_rates) > max_rate
-            %'over max rate'
-            bio_rates = bio_rates * max_rate / sum(bio_rates);
-        end
         
         % add rates to species
         fluxes(x, :) = fluxes(x, :) - accumarray(bio_reac1_i, bio_rates, [n_species, 1])';
@@ -198,9 +197,8 @@ flux_out = reshape(flux(0, y_vec), [n_x, n_species]);
 
 bio_rates_out = zeros(n_x, n_bio_rxns);
 abio_rates_out = zeros(n_x, n_abio_rxns);
-
 for x = 1: n_x
-    [a, b] = rates(squeeze(y(end, x, :))')
+    [bio_rates_out(x, :), abio_rates_out(x, :)] = rates(squeeze(y(end, x, :))');
 end
 
 end
