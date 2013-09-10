@@ -1,19 +1,19 @@
 function [t, y, flux_out, bio_rates_out, abio_rates_out] = run()
 
 % constants
-diffusion_constant_per_compartment = 6.0;
-precipitation_constant = 0.05;
+diffusion_constant_per_compartment2 = 0.25;
+precipitation_constant = 0.01;
 %precipitation_constant = 1.0 * diffusion_constant;
 rate_constant = 1e-3;
-max_rate = 5e2;
+max_rate = 1e12;
 
-fixed_oxygen_level = 200.0;
-fixed_oxygen_diffusion = 1e2;
+fixed_oxygen_level = 250.0;
+fixed_oxygen_diffusion = 1e3;
 
 % simulation parameters
-n_x = 20;
-t_max = 1e5;
-diffusion_constant = diffusion_constant_per_compartment * n_x;
+n_x = 15;
+t_max = 1e4;
+diffusion_constant = diffusion_constant_per_compartment2 * n_x ^ 2;
 
 % species list
 [s, ~, n_species] = species_map();
@@ -21,33 +21,33 @@ diffusion_constant = diffusion_constant_per_compartment * n_x;
 biotic_rxns = [
     % respiration
     %s('C'), s('O'), s(''), s(''), -10.0
-    s('C'), s('N+'), s('N-'), s(''), -350.0
-    s('C'), s('Fe+'), s('Fe-'), s(''), -250.0
-    s('C'), s('S+'), s('S-'), s(''), -40.0
+    s('C'), s('N+'), s('N-'), s(''), -450.0 % Canfield Table 3.7, p.90, x5/4
+    s('C'), s('Fe+'), s('Fe-'), s(''), -300.0   % Ehrlich 13.6.6, p. 314
+    s('C'), s('S+'), s('S-'), s(''), -80.0  % Canfield Table 3.7, x2 for 1/2
 
     % oxidations
-    s('O'), s('N-'), s('N+'), s(''), -500.0
-    s('O'), s('S-'), s('S+'), s(''), -500.0
+    s('O'), s('N-'), s('N+'), s(''), -300.0    % Ehrlich 13.2.3, p. 235
+    s('O'), s('S-'), s('S+'), s(''), -190.0 % cooky website
     
     % iron oxidation on nitrate
-    s('N+'), s('Fe-'), s('Fe+'), s('N-'), -200.0
+    s('N+'), s('Fe-'), s('Fe+'), s('N-'), -300.0    % ?? Canfield p.284 describes reaction
     
     % fermentation
-    s('C'), s(''), s(''), s(''), -10.0
+    %s('C'), s(''), s(''), s(''), -10.0
 ];
 
 abiotic_rxns = [
     % iron oxidation
-    s('O'), s('Fe-'), s('Fe+'), s(''), -1e6
+    s('O'), s('Fe-'), s('Fe+'), s(''), 1e6
 ];
 
 photo = 0.0;
 sources = [
-    %s('O'), photo, 1
-    s('C'), 0, 1
+    s('O'), photo, 1
+    s('C'), photo, 1
 ];
 
-precipitating_species = [s('Fe+') s('C')];
+precipitating_species = [s('Fe+') s('C') s('N-') s('S-')];
 %precipitating_species = [];
 
 diffusing_species = setdiff(1: n_species, precipitating_species);
@@ -58,14 +58,14 @@ concs0(:, s('')) = 1.0;
 concs0(:, s('C')) = 100.0;
 concs0(:, s('O')) = 0.0;
 
-concs0(:, s('N+')) = 50.0;
-concs0(:, s('N-')) = 50.0;
+concs0(:, s('N+')) = 100.0;
+concs0(:, s('N-')) = 0.0;
 
 concs0(:, s('Fe+')) = 30.0;
 concs0(:, s('Fe-')) = 30.0;
 
-concs0(:, s('S+')) = 70.0;
-concs0(:, s('S-')) = 70.0;
+concs0(:, s('S+')) = 0.0;
+concs0(:, s('S-')) = 120.0;
 
 
 % compute internal parameters
@@ -89,8 +89,8 @@ abio_reac1_i = abiotic_rxns(:, 1);
 abio_reac2_i = abiotic_rxns(:, 2);
 abio_prod1_i = abiotic_rxns(:, 3);
 abio_prod2_i = abiotic_rxns(:, 4);
-abio_delta_Go = abiotic_rxns(:, 5)';
-n_abio_rxns = length(abio_delta_Go);
+abio_rate_constants = abiotic_rxns(:, 5)';
+n_abio_rxns = length(abio_rate_constants);
 
 
 source_species = sources(:, 1);
@@ -110,7 +110,7 @@ function [bio_rates, abio_rates] = rates(concs_row)
     abio_reac2 = concs_row(abio_reac2_i);
 
     bio_rates = max(0.0, rate_constant * bio_reac1 .* bio_reac2 .* (-bio_delta_Go));
-    abio_rates = rate_constant * abio_reac1 .* abio_reac2 .* (-abio_delta_Go);
+    abio_rates = rate_constant * abio_reac1 .* abio_reac2 .* abio_rate_constants;
     
     % enforce the maximum rate for biotic reactions
     if sum(bio_rates) > max_rate
@@ -118,8 +118,8 @@ function [bio_rates, abio_rates] = rates(concs_row)
         bio_rates = bio_rates * max_rate / sum(bio_rates);
     end
     
-    assert(all(bio_rates >= -1e-6))
-    assert(all(abio_rates >= -1e-6))
+    %assert(all(bio_rates >= -1e-3))
+    %assert(all(abio_rates >= -1e-3))
 end 
 
 % twiddle because this is time-independent
