@@ -10,7 +10,7 @@ end
 if show_o
     to_show = {'O', 'C', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-'};
 else
-    to_show = {'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-'};
+    to_show = {'N+', 'S+', 'Fe-'};
 end
 
 idx = cellfun(@(x) s(x), to_show);
@@ -31,7 +31,7 @@ zlabel('concentration');
 if show_o
     legend('O', 'C', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-');
 else
-    legend('N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-');
+    legend('N+', 'S+', 'Fe-');
 end
 
 hold off;

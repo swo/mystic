@@ -18,6 +18,12 @@ diffusion_constant = diffusion_constant_per_compartment2 * n_x ^ 2;
 % species list
 [s, ~, n_species] = species_map();
 
+precipitation_constant_input = [
+    s('N-'), 0.0
+    s('S-'), 0.0
+    s('Fe+'), 0.1
+];
+
 biotic_rxns = [
     % respiration
     %s('C'), s('O'), s(''), s(''), -10.0
@@ -38,7 +44,7 @@ biotic_rxns = [
 
 abiotic_rxns = [
     % iron oxidation
-    s('O'), s('Fe-'), s('Fe+'), s(''), 1e6
+    s('O'), s('Fe-'), s('Fe+'), s(''), 1e7
 ];
 
 photo = 0.0;
@@ -46,11 +52,6 @@ sources = [
     s('O'), photo, 1
     s('C'), photo, 1
 ];
-
-precipitating_species = [s('Fe+') s('C') s('N-') s('S-')];
-%precipitating_species = [];
-
-diffusing_species = setdiff(1: n_species, precipitating_species);
 
 % initialize the lake
 concs0 = zeros(n_x, n_species);
@@ -70,10 +71,19 @@ concs0(:, s('S-')) = 120.0;
 
 % compute internal parameters
 
+% make the precipitation constants
+precipitation_constants = zeros([1 n_species]);
+for i = 1: length(precipitation_constant_input)
+    idx = precipitation_constant_input(i, 1);
+    val = precipitation_constant_input(i, 2);
+
+    precipitation_constants(idx) = val;
+end
+
 % make new precipitation values
 D = diffusion_constant;
-D_plus = (1.0 + precipitation_constant) * D;
-D_minus = (1.0 - precipitation_constant) * D;
+D_plus = (1.0 + precipitation_constants) * D
+D_minus = (1.0 - precipitation_constants) * D
 
 % grab the unchanging columns from the reaction matrix
 
@@ -166,13 +176,11 @@ function [fluxes] = flux(~, concs_vector)
         
         % -- diffusion --        
         if x > 1
-            fluxes(x, diffusing_species) = fluxes(x, diffusing_species) + diffusion_constant * (concs(x - 1, diffusing_species) - concs(x, diffusing_species));
-            fluxes(x, precipitating_species) = fluxes(x, precipitating_species) + D_plus * concs(x - 1, precipitating_species) - D_minus * concs(x, precipitating_species);
+            fluxes(x, :) = fluxes(x, :) + D_plus .* concs(x - 1, :) - D_minus .* concs(x, :);
         end
 
         if x < n_x
-            fluxes(x, diffusing_species) = fluxes(x, diffusing_species) + diffusion_constant * (concs(x + 1, diffusing_species) - concs(x, diffusing_species));
-            fluxes(x, precipitating_species) = fluxes(x, precipitating_species) - D_plus * concs(x, precipitating_species) + D_minus * concs(x + 1, precipitating_species);
+            fluxes(x, :) = fluxes(x, :) - D_plus .* concs(x, :) + D_minus .* concs(x + 1, :);
         end
 
     end % for x
