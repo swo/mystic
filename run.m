@@ -4,7 +4,7 @@ function [t, y, flux_out, bio_rates_out, abio_rates_out] = run()
 diffusion_constant_per_compartment2 = 0.25;
 precipitation_constant = 0.01;
 %precipitation_constant = 1.0 * diffusion_constant;
-rate_constant = 1e-3;
+rate_constant = 1e-6;
 max_rate = 1e12;
 
 fixed_oxygen_level = 250.0;
@@ -82,8 +82,8 @@ end
 
 % make new precipitation values
 D = diffusion_constant;
-D_plus = (1.0 + precipitation_constants) * D
-D_minus = (1.0 - precipitation_constants) * D
+D_plus = (1.0 + precipitation_constants) * D;
+D_minus = (1.0 - precipitation_constants) * D;
 
 % grab the unchanging columns from the reaction matrix
 
