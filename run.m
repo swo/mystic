@@ -3,19 +3,19 @@ function [t, c, m] = run()
 
 % constants
 diffusion_constant_per_compartment2 = 0.1;
-kappa = 1.0;
-mu_decay = 1e2;
-efficiency = 1.0;
+kappa = 1e-2;
+mu_decay = 1.0;
+efficiency = 1e-1;
 rate_constant = 1.0;
 
 microbes0_value = 1.0;
 
 fixed_oxygen_level = 100.0;
-fixed_oxygen_diffusion = 1e7;
+fixed_oxygen_diffusion = 1e3;
 
 % simulation parameters
 n_x = 5;
-t_max = 1;
+t_max = 100;
 diffusion_constant = diffusion_constant_per_compartment2 * n_x ^ 2;
 
 % species list
@@ -25,6 +25,7 @@ precipitation_constant_input = [
     s('N-'), 0.0
     s('S-'), 0.0
     s('Fe+'), 0.1
+    s('C'), 0.1
 ];
 
 biotic_rxns = [
@@ -65,11 +66,11 @@ concs0(:, s('O')) = 0.0;
 concs0(:, s('N+')) = 100.0;
 concs0(:, s('N-')) = 0.0;
 
-concs0(:, s('Fe+')) = 30.0;
-concs0(:, s('Fe-')) = 30.0;
+%concs0(:, s('Fe+')) = 30.0;
+%concs0(:, s('Fe-')) = 30.0;
 
-concs0(:, s('S+')) = 60.0;
-concs0(:, s('S-')) = 60.0;
+%concs0(:, s('S+')) = 60.0;
+%concs0(:, s('S-')) = 60.0;
 
 
 % compute internal parameters
