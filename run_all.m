@@ -9,7 +9,7 @@ if run_it
 end
 
 if show_o
-    to_show = {'O', 'C', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-'};
+    to_show = {'O', 'C', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-', 'P'};
 else
     to_show = {'N+', 'S+', 'Fe-'};
 end
@@ -21,7 +21,7 @@ clf;
 subplot(2, 1, 1)
 hold all;
 for i = idx
-    if i == 2
+    if i == 2 || i == 3
         plot(c(end, :, i), 'LineWidth', 2)
     else
         plot(c(end, :, i))
@@ -33,19 +33,19 @@ xlabel('depth');
 ylabel('concentration');
 
 if show_o
-    legend('O', 'C', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-');
+    legend('O', 'C', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-', 'P');
 else
     legend('N+', 'S+', 'Fe-');
 end
 
 subplot(2, 1, 2)
 hold all;
-for i = 1:6
+for i = 1:7
     plot(m(end, :, i))
 end
 hold off;
 
-legend('resp N', 'resp Fe', 'resp S', 'ox N', 'ox S', 'ox Fe')
+legend('aer het', 'denit', 'resp Fe', 'resp S', 'ox N', 'ox S', 'NFE')
 
 %flux
 %bio_rates

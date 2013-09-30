@@ -2,16 +2,19 @@
 function [t, c, m] = run()
 
 % constants
-diffusion_constant_per_compartment2 = 0.1;
-kappa = 1e-2;
-mu_decay = 1.0;
-efficiency = 1e-1;
+diffusion_constant_per_compartment2 = 0.5;
+kappa = 1e2;
+mu_decay = 1e-1;
+efficiency = 1e-3;
 rate_constant = 1.0;
+
+nitrogen_ratio = 0.0;
+carbon_ratio = 1.0;
 
 microbes0_value = 1.0;
 
 fixed_oxygen_level = 100.0;
-fixed_oxygen_diffusion = 1e3;
+fixed_oxygen_diffusion = 1e4;
 
 % simulation parameters
 n_x = 5;
@@ -30,9 +33,10 @@ precipitation_constant_input = [
 
 biotic_rxns = [
     % respiration
-    s('C'), s('N+'), s('N-'), s(''), -450.0 % Canfield Table 3.7, p.90, x5/4
-    s('C'), s('Fe+'), s('Fe-'), s(''), -300.0   % Ehrlich 13.6.6, p. 314
-    s('C'), s('S+'), s('S-'), s(''), -80.0  % Canfield Table 3.7, x2 for 1/2
+    s('C'), s('O'), s('N-'), s(''), -300.0
+    s('C'), s('N+'), s('N-'), s(''), -250.0 % Canfield Table 3.7, p.90, x5/4
+    s('C'), s('Fe+'), s('Fe-'), s('N-'), -300.0   % Ehrlich 13.6.6, p. 314
+    s('C'), s('S+'), s('S-'), s('N-'), -80.0  % Canfield Table 3.7, x2 for 1/2
 
     % oxidations
     s('O'), s('N-'), s('N+'), s(''), -300.0    % Ehrlich 13.2.3, p. 235
@@ -65,6 +69,8 @@ concs0(:, s('O')) = 0.0;
 
 concs0(:, s('N+')) = 100.0;
 concs0(:, s('N-')) = 0.0;
+
+concs0(:, s('P')) = 100.0;
 
 %concs0(:, s('Fe+')) = 30.0;
 %concs0(:, s('Fe-')) = 30.0;
@@ -128,7 +134,7 @@ function [bio_rates, abio_rates, micro_rates] = rates(concs_row, micro_row)
     bio_rates = kappa * bio_reac1 .* bio_reac2 .* micro_row ./ (-bio_delta_Go);
     %assert(all(bio_rates > -1e-6))
 
-    micro_rates = efficiency * (-bio_delta_Go) .* bio_rates - mu_decay * micro_row;
+    micro_rates = concs_row(s('P')) * efficiency * (-bio_delta_Go) .* bio_rates - mu_decay * micro_row;
 
     abio_rates = rate_constant * abio_reac1 .* abio_reac2 .* abio_rate_constants;
 end
@@ -148,7 +154,10 @@ function [out_flux] = flux(~, concs_vector)
     conc_fluxes(source_idx) = conc_fluxes(source_idx) + source_rates;
     
     % apply the fixed oxygen term
-    conc_fluxes(1, [s('O') s('C')]) = conc_fluxes(1, [s('O') s('C')]) + fixed_oxygen_diffusion * (fixed_oxygen_level - concs(1, s('O')));
+    oxygen_source = fixed_oxygen_diffusion * (fixed_oxygen_level - concs(1, s('O')));
+    conc_fluxes(1, s('O')) = conc_fluxes(1, s('O')) + oxygen_source;
+    conc_fluxes(1, s('C')) = conc_fluxes(1, s('C')) + carbon_ratio * oxygen_source;
+    conc_fluxes(1, s('N-')) = conc_fluxes(1, s('N-')) + nitrogen_ratio * oxygen_source;
     
     for x = 1: n_x
         [bio_rates, abio_rates, micro_rates] = rates(concs(x, :), micros(x, :));
@@ -169,6 +178,7 @@ function [out_flux] = flux(~, concs_vector)
         conc_fluxes(x, :) = conc_fluxes(x, :) + accumarray(abio_prod2_i, abio_rates, [n_species, 1])';
 
         micro_fluxes(x, :) = micro_rates;
+        conc_fluxes(x, s('P')) = -sum(micro_rates);
         
         % -- diffusion --        
         if x > 1
