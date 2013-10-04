@@ -2,17 +2,20 @@ function [t, y, final_flux, final_ma_op_rates, final_tea_rates] = run()
 
 % constants
 nitrogen_ratio = 0.30;  % N- released per C degraded, 0.15 from Redfield
-carbon_ratio = 1.01; % C dumped per O dumped
+carbon_ratio = 1.005; % C dumped per O dumped
 
-diffusion_constant_per_compartment2 = 0.05;
+diffusion_constant_per_compartment2 = 0.5;
 fixed_oxygen_level = 50.0;
-fixed_oxygen_diffusion = 1e2;
+fixed_oxygen_diffusion = 1e3;
 
 fixed_co2_level = 600;
 fixed_co2_diffusion = fixed_oxygen_diffusion;
 
+fixed_methane_level = 0.0;
+fixed_methane_diffusion = fixed_oxygen_diffusion;
+
 % simulation parameters
-n_x = 15;
+n_x = 17;
 t_max = 1e4;
 diffusion_constant = diffusion_constant_per_compartment2 * n_x ^ 2;
 %fixed_oxygen_diffusion = diffusion_constant;
@@ -24,7 +27,7 @@ precipitation_constant_input = [
     s('N-'), 0.0
     s('S-'), 0.0
     s('Fe+'), 0.1
-    s('C'), 0.1
+    s('C'), 0.0
     s('CO2'), 0.0
 ];
 
@@ -48,11 +51,11 @@ po_rc = 1e0;
 po_teas = [
     % in species, out species, c_lim, # electrons (e_j)
     % c_lim in uM
-    s('O'), s('null'), 20.0, 4  % output is water
+    s('O'), s('null'), 20.0, 2  % output is water
     s('N+'), s('null'), 5.0, 5  % output is N2
-    s('Fe+'), s('Fe-'), 1.0, 1 % had to adjust from HWvC on account of units (60.0)
-    s('S+'), s('S-'), 0.03, 8
-    s('CO2'), s('null'), 0.0, 8 % output is methane
+    s('Fe+'), s('Fe-'), 0.5, 1 % had to adjust from HWvC on account of units (60.0)
+    s('S+'), s('S-'), 30, 8 % note HWvC have 0.03 mM (= 30 uM)
+    s('CO2'), s('CH4'), 0.0, 8 % output is methane
 ];
 [n_po_teas, ~] = size(po_teas);
 
@@ -137,6 +140,9 @@ function [conc_fluxes] = flux(~, concs_vector)
     % apply the fixed co2 term
     co2_source = fixed_co2_diffusion * (fixed_co2_level - concs(1, s('CO2')));
     conc_fluxes(1, s('CO2')) = conc_fluxes(1, s('CO2')) + co2_source;
+    
+    methane_source = fixed_methane_diffusion * (fixed_methane_level - concs(1, s('CH4')));
+    conc_fluxes(1, s('CH4')) = conc_fluxes(1, s('CH4')) + methane_source;
     
     for x = 1: n_x
         [ma_op_rates, tea_rates] = rates(concs(x, :));

@@ -1,5 +1,5 @@
 run_it = 1;
-show_c = 1;
+show_c = 0;
 
 s = species_map();
 
@@ -15,7 +15,7 @@ if show_c
     to_show = {'O', 'C', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-'};
     i_bold_max = 2;
 else
-    to_show = {'O', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-', 'CO2'};
+    to_show = {'O', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-', 'CH4'};
     i_bold_max = 1;
 end
 
@@ -40,7 +40,7 @@ ylabel('concentration');
 if show_c
     legend('O', 'C', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-', 'CO2');
 else
-    legend('O', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-', 'CO2');
+    legend('O', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-');
 end
 
 %subplot(2, 1, 2)
@@ -52,6 +52,5 @@ end
 
 %legend('aer het', 'denit', 'resp Fe', 'resp S', 'ox N', 'ox S', 'NFE')
 
-%flux
-%bio_rates
-%abio_rates
+all_rates = [final_ma_op_rates final_tea_rates];
+csvwrite('rates.csv', all_rates);
