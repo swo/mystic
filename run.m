@@ -1,4 +1,4 @@
-function [t, y, final_flux, final_ma_op_rates, final_tea_rates] = run()
+function [t, y, final_flux, all_ma_op_rates, all_tea_rates] = run()
 
 %% Constants
 % These are constants that make assertions about the actual system
@@ -13,7 +13,7 @@ fixed_oxygen_diffusion = 1e4;   % diffusion from oxygen above the thermocline
 fixed_co2_level = 600;  % CO2 level at thermocline
 fixed_co2_diffusion = fixed_oxygen_diffusion;
 
-fixed_methane_level = 0.0;
+fixed_bottom_methane_level = 50.0;
 fixed_methane_diffusion = fixed_oxygen_diffusion;
 
 %% Simulation parameters
@@ -60,6 +60,8 @@ ma_op_rxns = [
     2, s('O'), 1, s('N-'), 1, s('N+'), 5.0   % k_4^sr = 5e6 M-1 yr-1
     2, s('O'), 1, s('S-'), 1, s('S+'), 0.16  % k_5^sr = 1.6e5 M-1 yr-1
     5, s('Fe-'), 1, s('N+'), 5, s('Fe+'), 0.01   % swo> my guess
+    1, s('CH4'), 2, s('O'), 1, s('CO2'), 1e4    % k_9^sr = 1e10 M-1 yr-1
+    1, s('CH4'), 1, s('S+'), 1, s('S-'), 0.1    % k_10^sr = 1e5 M-1 yr-1
 ];
 [n_ma_op_rxns, ~] = size(ma_op_rxns);
 
@@ -86,8 +88,8 @@ concs0 = zeros(n_x, n_species);
 concs0(:, s('C')) = 200.0;
 concs0(:, s('O')) = 50.0;
 
-concs0(:, s('N+')) = 100.0;
-concs0(:, s('N-')) = 100.0;
+concs0(:, s('N+')) = 10.0;
+concs0(:, s('N-')) = 10.0;
 
 concs0(:, s('Fe+')) = 30.0;
 concs0(:, s('Fe-')) = 30.0;
@@ -179,8 +181,9 @@ function [conc_fluxes] = flux(~, concs_vector)
     co2_source = fixed_co2_diffusion * (fixed_co2_level - concs(1, s('CO2')));
     conc_fluxes(1, s('CO2')) = conc_fluxes(1, s('CO2')) + co2_source;
     
-    methane_source = fixed_methane_diffusion * (fixed_methane_level - concs(1, s('CH4')));
-    conc_fluxes(1, s('CH4')) = conc_fluxes(1, s('CH4')) + methane_source;
+    % apply the methane source at the bottom of the lake
+    methane_source = fixed_methane_diffusion * (fixed_bottom_methane_level - concs(n_x, s('CH4')));
+    conc_fluxes(n_x, s('CH4')) = conc_fluxes(n_x, s('CH4')) + methane_source;
     
     for x = 1: n_x
         [ma_op_rates, tea_rates] = rates(concs(x, :));
@@ -247,5 +250,20 @@ final_tea_rates = zeros(n_x, n_po_teas);
 for x = 1: n_x
     [final_ma_op_rates(x, :), final_tea_rates(x, :)] = rates(squeeze(y(end, x, :))');
 end
+
+%% get all the reaction rates for all timepoints
+% initialize containers
+all_ma_op_rates = zeros(n_time_slices, n_x, n_ma_op_rxns);
+all_tea_rates = zeros(n_time_slices, n_x, n_po_teas);
+
+% get all the rates
+for time = 1: n_time_slices
+    for x = 1: n_x
+        [all_ma_op_rates(time, x, :), all_tea_rates(time, x, :)] = rates(squeeze(y(time, x, :))');
+    end
+end
+
+% save the output
+save('all_rates.txt', 'all_ma_op_rates', 'all_tea_rates', '-ascii');
 
 end

@@ -1,5 +1,5 @@
 run_it = 1; % run the simulation again?
-show_c = 0; % show the carbon species?
+show_c = 1; % show the carbon species?
 
 % grab the species map
 s = species_map();
@@ -16,7 +16,7 @@ final_tea_rates
 
 % prepare lists of the curves to be drawn
 if show_c
-    to_show = {'O', 'C', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-', 'CH4'};
+    to_show = {'O', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-', 'CH4'};
     i_bold_max = 2;
 else
     to_show = {'O', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-'};
@@ -44,7 +44,7 @@ ylabel('concentration');
 
 % attach legend
 if show_c
-    legend('O', 'C', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-', 'CH4');
+    legend('O', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-', 'CH4');
 else
     legend('O', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-');
 end
