@@ -51,8 +51,3 @@ if show_c
 else
     legend('O', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-');
 end
-
-% write the rates out to a file: columns are each reaction, rows are each
-% depth
-all_rates = [final_ma_op_rates final_tea_rates];
-csvwrite('rates.csv', all_rates);
