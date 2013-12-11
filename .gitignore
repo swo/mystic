@@ -2,3 +2,6 @@
 *.ps
 .*
 .Rproj.user
+*.csv
+*.Rproj
+*.pdf
