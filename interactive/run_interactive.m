@@ -1,3 +1,6 @@
+% include the primary matlab scripts
+addpath('../bin');
+
 run_it = 1; % run the simulation again?
 show_c = 1; % show the carbon species?
 
