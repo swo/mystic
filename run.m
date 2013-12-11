@@ -21,7 +21,7 @@ fixed_methane_diffusion = fixed_oxygen_diffusion;
 % assertions about the actual system.
 
 n_x = 17;   % number of compartments
-t_max = 25.0;   % time until end of simulation (yrs)
+t_max = 5.0;   % time until end of simulation (yrs)
 
 % compute the diffusion constant, which is dependent on the length scale,
 % which depends on the square of the number of compartments

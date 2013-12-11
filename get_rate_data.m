@@ -1,6 +1,6 @@
 % pick evenly spaced time points
 n_t = 50;
-t_min = 1;
+t_min = 0.1;
 t_max = max(t);
 ts = linspace(t_min, t_max, n_t);
 
