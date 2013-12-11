@@ -6,3 +6,5 @@
 *.Rproj
 *.pdf
 old/*
+*.bak
+*.xlsx
