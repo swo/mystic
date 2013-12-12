@@ -9,13 +9,8 @@ s = species_map();
 
 % if required, rerun the simulation
 if run_it
-    [t, y, final_flux, final_ma_op_rates, final_tea_rates] = run();
+    [time_slices, concs_history, rates_history] = run();
 end
-
-% spit out the final results from the model for cursory diagnostics
-final_flux
-final_ma_op_rates
-final_tea_rates
 
 % prepare lists of the curves to be drawn
 if show_c
@@ -30,13 +25,14 @@ idx = cellfun(@(x) s(x), to_show);
 % clear the plot
 clf;
 
+% show the final concentration curves
 % plot all the curves on one graph, bolding one line
 hold all;
 for i = idx
     if i <= i_bold_max
-        plot(y(end, :, i), 'LineWidth', 2)
+        plot(concs_history(end, :, i), 'LineWidth', 2)
     else
-        plot(y(end, :, i))
+        plot(concs_history(end, :, i))
     end
 end
 hold off;

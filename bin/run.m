@@ -1,4 +1,4 @@
-function [t, y, final_flux, all_ma_op_rates, all_tea_rates] = run()
+function [time_slices, concs_history, rates_history] = run()
 
 %% Constants
 % These are constants that make assertions about the actual system
@@ -231,39 +231,20 @@ concs0_vector = reshape(concs0, [n_total, 1]);
 % t is the times at which the ODE solver gives output. They are not evenly
 % spaced! y is a matrix whose rows are the flattened concentration matrices
 % at each time step
-[t, y] = ode15s(@flux, [0 t_max], concs0_vector, options);
+[time_slices, y] = ode15s(@flux, [0 t_max], concs0_vector, options);
 
 % unfold the result y, putting it into a 3D space whose dimensions
 % correspond to time, depth, and metabolite
 [n_time_slices, ~] = size(y);
-y = reshape(y, n_time_slices, n_x, n_species);
-
-% get the concentration profile at the last timepoint, flatten it to a
-% vector, and feed that to the flux function to get the fluxes at the last
-% timepoint
-concs_vector = reshape(y(end, :, :), [n_total, 1]);
-final_flux = reshape(flux(0, concs_vector), [n_x, n_species]);
-
-% similarly, get the reaction rates at the last timepoint
-final_ma_op_rates = zeros(n_x, n_ma_op_rxns);
-final_tea_rates = zeros(n_x, n_po_teas);
-for x = 1: n_x
-    [final_ma_op_rates(x, :), final_tea_rates(x, :)] = rates(squeeze(y(end, x, :))');
-end
+concs_history = reshape(y, n_time_slices, n_x, n_species);
 
 %% get all the reaction rates for all timepoints
-% initialize containers
-all_ma_op_rates = zeros(n_time_slices, n_x, n_ma_op_rxns);
-all_tea_rates = zeros(n_time_slices, n_x, n_po_teas);
-
-% get all the rates
+% ma_op then teas
+rates_history = zeros(n_time_slices, n_x, n_ma_op_rxns + n_po_teas);
 for time = 1: n_time_slices
     for x = 1: n_x
-        [all_ma_op_rates(time, x, :), all_tea_rates(time, x, :)] = rates(squeeze(y(time, x, :))');
+        [rates_history(time, x, 1:n_ma_op_rxns), rates_history(time, x, n_ma_op_rxns + 1:end)] = rates(squeeze(concs_history(time, x, :))');
     end
 end
-
-% save the output
-save('all_rates.txt', 'all_ma_op_rates', 'all_tea_rates', '-ascii');
 
 end
