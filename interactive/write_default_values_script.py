@@ -9,10 +9,10 @@ import ConfigParser
 import re
 
 conf = ConfigParser.ConfigParser()
-conf.read('../sens.cfg')
+conf.read('../lake.cfg')
 
 # construct the string of default argument values
-arg_string = "\n".join(["\t{0},\t... {1}".format(value, name) for name, value in conf.items('Simulation')])
+arg_string = "\n".join(["\t{0},\t... {1}".format(value, name) for name, value in conf.items('Simulation parameters')])
 
 # remove the last comma to prevent matlab from complaining
 arg_string = re.sub(",(?=[^,]*$)", "", arg_string)
