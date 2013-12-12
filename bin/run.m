@@ -1,5 +1,4 @@
-function [time_slices, concs_history, rates_history] = run(NITROGEN_RATIO, CARBON_RATIO, FIXED_OXYGEN_LEVEL, FIXED_OXYGEN_DIFFUSION, FIXED_CO2_LEVEL, T_MAX, FE_PRECIPITATION, DIFF_CONST_COMP, MA_OP_O_FE_RATE_CONST, MA_OP_O_N_RATE_CONST, MA_OP_O_S_RATE_CONST, MA_OP_FE_N_RATE_CONST, PRIMARY_OX_RATE_CONST, C_LIM_O, C_LIM_N, C_LIM_FE, C_LIM_S, C_LIM_CO2, CONCS0_C, CONCS0_O, CONCS0_NTOT, PM_RATIO_N, CONCS0_FETOT, PM_RATIO_FE, CONCS0_STOT, PM_RATIO_S)
-
+function [time_slices, concs_history, rates_history] = run(NITROGEN_RATIO, CARBON_RATIO, FIXED_OXYGEN_LEVEL, FIXED_OXYGEN_DIFFUSION, FIXED_CO2_LEVEL, FIXED_TOP_METHANE, FIXED_BOTTOM_METHANE, T_MAX, FE_PRECIPITATION, DIFF_CONST_COMP, MA_OP_O_FE_RATE_CONST, MA_OP_O_N_RATE_CONST, MA_OP_O_S_RATE_CONST, MA_OP_FE_N_RATE_CONST, MA_OP_CH4_O_RATE_CONST, MA_OP_CH4_S_RATE_CONST, PRIMARY_OX_RATE_CONST, C_LIM_O, C_LIM_N, C_LIM_FE, C_LIM_S, C_LIM_CO2, CONCS0_C, CONCS0_O, CONCS0_NTOT, PM_RATIO_N, CONCS0_FETOT, PM_RATIO_FE, CONCS0_STOT, PM_RATIO_S)
 %% Constants
 % These are constants that make assertions about the actual system
 
@@ -13,7 +12,8 @@ fixed_oxygen_diffusion = FIXED_OXYGEN_DIFFUSION;   % diffusion from oxygen above
 fixed_co2_level = FIXED_CO2_LEVEL;  % CO2 level at thermocline
 fixed_co2_diffusion = fixed_oxygen_diffusion;
 
-fixed_bottom_methane_level = 50.0;
+fixed_top_methane_level = FIXED_TOP_METHANE;    % methane at thermocline
+fixed_bottom_methane_level = FIXED_BOTTOM_METHANE;
 fixed_methane_diffusion = fixed_oxygen_diffusion;
 
 %% Simulation parameters
@@ -60,8 +60,8 @@ ma_op_rxns = [
     2, s('O'), 1, s('N-'), 1, s('N+'), MA_OP_O_N_RATE_CONST   % k_4^sr = 5e6 M-1 yr-1
     2, s('O'), 1, s('S-'), 1, s('S+'), MA_OP_O_S_RATE_CONST  % k_5^sr = 1.6e5 M-1 yr-1
     5, s('Fe-'), 1, s('N+'), 5, s('Fe+'), MA_OP_FE_N_RATE_CONST   % swo> my guess
-    1, s('CH4'), 2, s('O'), 1, s('CO2'), 1e4    % k_9^sr = 1e10 M-1 yr-1
-    1, s('CH4'), 1, s('S+'), 1, s('S-'), 0.1    % k_10^sr = 1e5 M-1 yr-1
+    1, s('CH4'), 2, s('O'), 1, s('CO2'), MA_OP_CH4_O_RATE_CONST    % k_9^sr = 1e10 M-1 yr-1
+    1, s('CH4'), 1, s('S+'), 1, s('S-'), MA_OP_CH4_S_RATE_CONST    % k_10^sr = 1e5 M-1 yr-1
 ];
 [n_ma_op_rxns, ~] = size(ma_op_rxns);
 
@@ -191,6 +191,10 @@ function [conc_fluxes] = flux(~, concs_vector)
     co2_source = fixed_co2_diffusion * (fixed_co2_level - concs(1, s('CO2')));
     conc_fluxes(1, s('CO2')) = conc_fluxes(1, s('CO2')) + co2_source;
     
+    % apply the fixed methane level at the termocline
+    methane_source = fixed_methane_diffusion * (fixed_top_methane_level - concs(1, s('CH4')));
+    conc_fluxes(1, s('CH4')) = conc_fluxes(1, s('CH4')) + methane_source;
+
     % apply the methane source at the bottom of the lake
     methane_source = fixed_methane_diffusion * (fixed_bottom_methane_level - concs(n_x, s('CH4')));
     conc_fluxes(n_x, s('CH4')) = conc_fluxes(n_x, s('CH4')) + methane_source;
