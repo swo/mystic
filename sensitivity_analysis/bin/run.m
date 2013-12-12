@@ -1,4 +1,4 @@
-function [] = run(NITROGEN_RATIO, CARBON_RATIO, FIXED_OXYGEN_LEVEL, FIXED_OXYGEN_DIFFUSION, FIXED_CO2_LEVEL, T_MAX, FE_PRECIPITATION, OUT)
+function [] = run(NITROGEN_RATIO, CARBON_RATIO, FIXED_OXYGEN_LEVEL, FIXED_OXYGEN_DIFFUSION, FIXED_CO2_LEVEL, T_MAX, FE_PRECIPITATION, DIFF_CONST_COMP, MA_OP_O_FE_RATE_CONST, MA_OP_O_N_RATE_CONST, MA_OP_O_S_RATE_CONST, MA_OP_FE_N_RATE_CONST, PRIMARY_OX_RATE_CONST, C_LIM_O, C_LIM_N, C_LIM_FE, C_LIM_S, C_LIM_CO2, CONCS0_C, CONCS0_O, CONCS0_NTOT, PM_RATIO_N, CONCS0_FETOT, PM_RATIO_FE, CONCS0_STOT, PM_RATIO_S, OUT)
 
 %% Constants
 % These are constants that make assertions about the actual system
@@ -6,7 +6,7 @@ function [] = run(NITROGEN_RATIO, CARBON_RATIO, FIXED_OXYGEN_LEVEL, FIXED_OXYGEN
 nitrogen_ratio = NITROGEN_RATIO;  % N- released per C degraded, 0.15 from Redfield
 carbon_ratio = CARBON_RATIO; % C dumped per O dumped
 
-diffusion_constant_per_compartment2 = 0.75; % input diffusion constant
+diffusion_constant_per_compartment2 = DIFF_CONST_COMP; % input diffusion constant
 fixed_oxygen_level = FIXED_OXYGEN_LEVEL;  % oxygen level at thermocline
 fixed_oxygen_diffusion = FIXED_OXYGEN_DIFFUSION;   % diffusion from oxygen above the thermocline
 
@@ -56,26 +56,26 @@ ma_op_rxns = [
     % aA + bB -> cC (columns: a, A, b, B, c, C, rate constant)
     % constants k_i are from HWvC
     % units: [rates] = uM-1 yr-1
-    0.25, s('O'), 1, s('Fe-'), 1, s('Fe+'), 10.0    % k_2^sr = 1e7 M-1 yr-1
-    2, s('O'), 1, s('N-'), 1, s('N+'), 5.0   % k_4^sr = 5e6 M-1 yr-1
-    2, s('O'), 1, s('S-'), 1, s('S+'), 0.16  % k_5^sr = 1.6e5 M-1 yr-1
-    5, s('Fe-'), 1, s('N+'), 5, s('Fe+'), 0.01   % swo> my guess
+    0.25, s('O'), 1, s('Fe-'), 1, s('Fe+'), MA_OP_O_FE_RATE_CONST    % k_2^sr = 1e7 M-1 yr-1
+    2, s('O'), 1, s('N-'), 1, s('N+'), MA_OP_O_N_RATE_CONST   % k_4^sr = 5e6 M-1 yr-1
+    2, s('O'), 1, s('S-'), 1, s('S+'), MA_OP_O_S_RATE_CONST  % k_5^sr = 1.6e5 M-1 yr-1
+    5, s('Fe-'), 1, s('N+'), 5, s('Fe+'), MA_OP_FE_N_RATE_CONST   % swo> my guess
 ];
 [n_ma_op_rxns, ~] = size(ma_op_rxns);
 
 % primary oxidation reactions
 % primary oxidation rate constant (po_rc): HWvC report 3e-5 to 3e1 yr-1
-po_rc = 1e0;
+po_rc = PRIMARY_OX_RATE_CONST;
 
 % primary oxidation terminal electron acceptors (po_teas)
 po_teas = [
     % columns: in species, out species, c_lim, # electrons (e_j)
     % units: [c_lim] = uM
-    s('O'), s('null'), 20.0, 2  % HWcV O2_lim=20; output is water
-    s('N+'), s('null'), 5.0, 5  % 5; output is N2
-    s('Fe+'), s('Fe-'), 0.1, 1 % 0.1; had to adjust from HWvC on account of units (60.0)
-    s('S+'), s('S-'), 30, 8 % note HWvC have 0.03 mM (= 30 uM)
-    s('CO2'), s('CH4'), 0.0, 8 % output is methane
+    s('O'), s('null'), C_LIM_O, 2  % HWcV O2_lim=20; output is water
+    s('N+'), s('null'), C_LIM_N, 5  % 5; output is N2
+    s('Fe+'), s('Fe-'), C_LIM_FE, 1 % 0.1; had to adjust from HWvC on account of units (60.0)
+    s('S+'), s('S-'), C_LIM_S, 8 % note HWvC have 0.03 mM (= 30 uM)
+    s('CO2'), s('CH4'), C_LIM_CO2, 8 % output is methane
 ];
 [n_po_teas, ~] = size(po_teas);
 
@@ -83,17 +83,27 @@ po_teas = [
 % initialize the lake, asserting flat profiles for each metabolite
 % metabolites not mentioned have concentration 0
 concs0 = zeros(n_x, n_species);
-concs0(:, s('C')) = 200.0;
-concs0(:, s('O')) = 50.0;
 
-concs0(:, s('N+')) = 100.0;
-concs0(:, s('N-')) = 100.0;
+concs0(:, s('C')) = CONCS0_C;
+concs0(:, s('O')) = CONCS0_O;
 
-concs0(:, s('Fe+')) = 30.0;
-concs0(:, s('Fe-')) = 30.0;
+%Start with an initial conc of N (CONCS0_NTOT) and a ratio of plus to minus PM_RATIO_N
+CONCS0_NPLUS = CONCS0_NTOT/(1 + (1/PM_RATIO_N));
+CONCS0_NMINUS = CONCS0_NTOT/(PM_RATIO_N + 1);
+concs0(:, s('N+')) = CONCS0_NPLUS;
+concs0(:, s('N-')) = CONCS0_NMINUS;
 
-concs0(:, s('S+')) = 120.0;
-concs0(:, s('S-')) = 120.0;
+%Start with an initial conc of FE (CONCS0_FETOT) and a ratio of plus to minus PM_RATIO_FE
+CONCS0_FEPLUS = CONCS0_FETOT/(1 + (1/PM_RATIO_FE));
+CONCS0_FEMINUS = CONCS0_FETOT/(PM_RATIO_FE + 1);
+concs0(:, s('Fe+')) = CONCS0_FEPLUS;
+concs0(:, s('Fe-')) = CONCS0_FEMINUS;
+
+%Start with an initial conc of S (CONCS0_STOT) and a ratio of plus to minus PM_RATIO_S
+CONCS0_SPLUS = CONCS0_STOT/(1 + (1/PM_RATIO_S));
+CONCS0_SMINUS = CONCS0_STOT/(PM_RATIO_S + 1);
+concs0(:, s('S+')) = CONCS0_SPLUS;
+concs0(:, s('S-')) = CONCS0_SMINUS;
 
 
 %% Internal parameters
