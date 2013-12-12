@@ -1,3 +1,6 @@
+% nb: be sure to run write_default_values python script first so that the
+% run_interactive_defaults matlab script exists!
+
 % include the primary matlab scripts
 addpath('../bin');
 
@@ -9,7 +12,7 @@ s = species_map();
 
 % if required, rerun the simulation
 if run_it
-    [time_slices, concs_history, rates_history] = run();
+    run_interactive_defaults;
 end
 
 % prepare lists of the curves to be drawn
