@@ -1,3 +1,3 @@
 #!/bin/bash
 
-export MATLABPATH=$MATLABPATH:$PWD/bin
+export MATLABPATH=$PWD/bin/:$PWD/sensitivity_analysis/bin/:$PWD/calibration/bin/
