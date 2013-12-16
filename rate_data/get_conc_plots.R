@@ -4,7 +4,7 @@ library(gplots)
 col <- rev(colorRampPalette(brewer.pal(9, 'RdBu'))(50))
 my.plot <- function(mat, name) {
     #heatmap.2(mat, xlab=name, Rowv=F, Colv=F, dendrogram='none', na.color='black', col=col, trace='none', key=F, labRow=F, labCol=F)
-    image(t(apply(mat, 2, rev)), col=col, bty='n', xaxt='n', yaxt='n', xlab=name, cex.label=1.0)
+    image(t(apply(mat, 2, rev)), col=col, bty='n', xaxt='n', yaxt='n', xlab=name, cex=1.0)
 }
 
 files <- c('conc_1.csv','conc_2.csv','conc_3.csv','conc_4.csv','conc_5.csv','conc_6.csv','conc_7.csv','conc_8.csv', 'conc_9.csv', 'conc_10.csv')
