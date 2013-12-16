@@ -30,7 +30,7 @@ function [d] = objective_f(params)
     [__VARIABLE_NAMES_HERE__] = deal(params_cell{:});
 
     % get the output of the model
-    [time_slices, concs_history, rates_history] = run(__VARIABLE_NAMES_HERE__);
+    [time_slices, concs_history, rates_history] = lake(__VARIABLE_NAMES_HERE__);
 
     % compare the output with the observed stuff; use only colums 1=oxygen, 3=nitrate, and 5=sulfate
     final_concs = squeeze(concs_history(end, :, :));

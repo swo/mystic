@@ -12,7 +12,7 @@ run_sens_params = run_params + ", out_fn"
 
 template = """function [] = get_rates({0})
 
-[time_slices, concs_history, rates_history] = run({1});
+[time_slices, concs_history, rates_history] = lake({1});
 final_rates = rates_history(end, :, :);
 dlmwrite(out_fn, final_rates);
 
