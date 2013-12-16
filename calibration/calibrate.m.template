@@ -35,10 +35,11 @@ function [d] = objective_f(params)
     % compare the output with the observed stuff; use only colums 1=oxygen, 3=nitrate, and 5=sulfate
     final_concs = squeeze(concs_history(end, :, :));
     model_concs = final_concs(:, [1 3 5]);
-    diff = real_concs - model_concs;
 
-    % compute the objective function
-    d = sum(sum(diff .^ 2));
+    % compute the objective function: the sum of the square of differences divided by experimental value
+    % (cf. chi-square statistic)
+    d = sum(sum(((real_concs - model_concs) .^ 2) ./ real_concs));
+
     log_time();
     dlmwrite(log_fn, d, '-append');
 end
