@@ -1,0 +1,2 @@
+Run write_calibrate.py to write calibrate.m from calibrate.m.template using
+the startings parameters as specified in lake.cfg.

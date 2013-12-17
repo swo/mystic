@@ -2,6 +2,7 @@ function [] = calibrate()
 
 start_params = [__VARIABLE_VALUES_HERE__];
 % params list: __VARIABLE_NAMES_HERE__
+% number of params: __N_VARIABLES__
 
 % set the log's filename
 log_fn = 'log';
@@ -50,8 +51,10 @@ fprintf(fh, 'starting calibration...');
 fclose(fh);
 log_time();
 
-% run the simulation
-[final_params, fval, exitflag, output] = fminsearch(@objective_f, start_params);
+% run the simulation. use lower bound of 0.0 for all input parameters
+lb = repmat(0.0, 1, __N_VARIABLES__);
+ub = repmat(Inf, 1, __N_VARIABLES__);
+[final_params, fval, exitflag, output] = fmincon(@objective_f, start_params, [], [], [], [], lb, ub);
 
 % record completion
 log_time();
