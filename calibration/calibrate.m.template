@@ -1,11 +1,14 @@
 function [] = calibrate()
 
-start_params = [__VARIABLE_VALUES_HERE__];
-% params list: __VARIABLE_NAMES_HERE__
-% number of params: __N_VARIABLES__
+start_params = [__INITIAL_VARIED_VALUES__];
+% varied parameters: __VARIED_NAMES__
+% number of params: __N_VARIED__
 
 % set the log's filename
 log_fn = 'log';
+
+% make sure the lake bin path is included
+path(path, '../bin');
 
 % read in the experimentally observed values
 real_concs = csvread('data/obs.csv');
@@ -28,10 +31,10 @@ function [d] = objective_f(params)
     params_cell = num2cell(params);
 
     % convert params array into a bunch of variables
-    [__VARIABLE_NAMES_HERE__] = deal(params_cell{:});
+    [__VARIED_NAMES__] = deal(params_cell{:});
 
     % get the output of the model
-    [time_slices, concs_history, rates_history] = lake(__VARIABLE_NAMES_HERE__);
+    [time_slices, concs_history, rates_history] = lake(__CALL_LIST__);
 
     % compare the output with the observed stuff; use only colums 1=oxygen, 3=nitrate, and 5=sulfate
     final_concs = squeeze(concs_history(end, :, :));
@@ -51,10 +54,8 @@ fprintf(fh, 'starting calibration...');
 fclose(fh);
 log_time();
 
-% run the simulation. use lower bound of 0.0 for all input parameters
-lb = repmat(0.0, 1, __N_VARIABLES__);
-ub = repmat(Inf, 1, __N_VARIABLES__);
-[final_params, fval, exitflag, output] = fmincon(@objective_f, start_params, [], [], [], [], lb, ub);
+% run the simulation. use list of lower and upper bounds from config file
+[final_params, fval, exitflag, output] = fmincon(@objective_f, start_params, [], [], [], [], [__LBS__], [__UBS__]);
 
 % record completion
 log_time();
