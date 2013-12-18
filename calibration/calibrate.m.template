@@ -59,7 +59,7 @@ log_time();
 
 % record completion
 log_time();
-fh = fopen(fn, 'a');
+fh = fopen(log_fn, 'a');
 fprintf(fh, 'finished!');
 fprintf(fh, 'function value: %g\n', fval);
 fprintf(fh, 'exit flag: %i\n', exitflag);
