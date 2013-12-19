@@ -1,2 +1,3 @@
 Run write_calibrate.py to write calibrate.m from calibrate.m.template using
-the startings parameters as specified in lake.cfg.
+the startings parameters as specified in lake.cfg. Intermediate values will
+be written out in log/log.txt and log/concs_*.csv.
