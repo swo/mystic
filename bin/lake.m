@@ -22,6 +22,7 @@ fixed_methane_diffusion = fixed_oxygen_diffusion;
 
 n_x = 17;   % number of compartments
 t_max = T_MAX;   % time until end of simulation (yrs)
+n_time_slices = 100;
 
 % compute the diffusion constant, which is dependent on the length scale,
 % which depends on the square of the number of compartments
@@ -245,7 +246,7 @@ concs0_vector = reshape(concs0, [n_total, 1]);
 % t is the times at which the ODE solver gives output. They are not evenly
 % spaced! y is a matrix whose rows are the flattened concentration matrices
 % at each time step
-[time_slices, y] = ode15s(@flux, [0 t_max], concs0_vector, options);
+[time_slices, y] = ode15s(@flux, linspace(0.0, t_max, n_time_slices), concs0_vector, options);
 
 % unfold the result y, putting it into a 3D space whose dimensions
 % correspond to time, depth, and metabolite
