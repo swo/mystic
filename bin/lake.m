@@ -151,7 +151,7 @@ po_tea_e = po_teas(:, 4)';
 
 n_total = n_x * n_species;
 
-function [ma_op_rates, tea_rates] = rates(concs_row)
+function [ma_op_rates, po_carbon_rate, tea_rates] = rates(concs_row)
     % compute the mass action rates
     ma_op_reac1 = concs_row(ma_op_reac1_i);
     ma_op_reac2 = concs_row(ma_op_reac2_i);
@@ -166,7 +166,8 @@ function [ma_op_rates, tea_rates] = rates(concs_row)
     f(end) = 1.0 - sum(f);
 
     % weight each TEA fraction by their # electrons
-    tea_rates = po_rc * concs_row(s('C')) * f ./ po_tea_e;
+    po_carbon_rate = po_rc * concs_row(s('C'));
+    tea_rates = po_carbon_rate * f ./ po_tea_e;
 end
 
 % -- flux --
@@ -199,7 +200,7 @@ function [conc_fluxes] = flux(~, concs_vector)
     conc_fluxes(n_x, s('CH4')) = conc_fluxes(n_x, s('CH4')) + methane_source;
     
     for x = 1: n_x
-        [ma_op_rates, tea_rates] = rates(concs(x, :));
+        [ma_op_rates, po_carbon_rate, tea_rates] = rates(concs(x, :));
 
         % apply the mass action rates
         conc_fluxes(x, :) = conc_fluxes(x, :) - accumarray(ma_op_reac1_i, ma_op_reac1_c .* ma_op_rates, [n_species, 1])';
@@ -210,10 +211,9 @@ function [conc_fluxes] = flux(~, concs_vector)
         conc_fluxes(x, :) = conc_fluxes(x, :) - accumarray(po_tea_i, tea_rates, [n_species, 1])';
         conc_fluxes(x, :) = conc_fluxes(x, :) + accumarray(po_tea_prod_i, tea_rates, [n_species, 1])';
         
-        total_tea = sum(tea_rates);
-        conc_fluxes(x, s('C')) = conc_fluxes(x, s('C')) - total_tea;
-        conc_fluxes(x, s('CO2')) = conc_fluxes(x, s('CO2')) + total_tea;
-        conc_fluxes(x, s('N-')) = conc_fluxes(x, s('N-')) + nitrogen_ratio * total_tea;
+        conc_fluxes(x, s('C')) = conc_fluxes(x, s('C')) - po_carbon_rate;
+        conc_fluxes(x, s('CO2')) = conc_fluxes(x, s('CO2')) + po_carbon_rate;
+        conc_fluxes(x, s('N-')) = conc_fluxes(x, s('N-')) + nitrogen_ratio * po_carbon_rate;
         
         % diffusion      
         if x > 1
