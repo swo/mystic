@@ -74,7 +74,7 @@ po_rc = PRIMARY_OX_RATE_CONST;
 po_teas = [
     % columns: in species, out species, c_lim, # electrons (e_j)
     % units: [c_lim] = uM
-    s('O'), s('null'), C_LIM_O, 2  % HWcV O2_lim=20; output is water
+    s('O'), s('null'), C_LIM_O, 4  % HWcV O2_lim=20; output is water
     s('N+'), s('null'), C_LIM_N, 5  % 5; output is N2
     s('Fe+'), s('Fe-'), C_LIM_FE, 1 % 0.1; had to adjust from HWvC on account of units (60.0)
     s('S+'), s('S-'), C_LIM_S, 8 % note HWvC have 0.03 mM (= 30 uM)
