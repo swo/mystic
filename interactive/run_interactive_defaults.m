@@ -23,10 +23,10 @@
 	0.0,	... c_lim_co2
 	200.0,	... concs0_c
 	50.0,	... concs0_o
-	200.0,	... concs0_ntot
-	1.0,	... pm_ratio_n
+	20.0,	... concs0_ntot
+	10.0,	... pm_ratio_n
 	60.0,	... concs0_fetot
-	1.0,	... pm_ratio_fe
+	10.0,	... pm_ratio_fe
 	240.0,	... concs0_stot
-	1.0	... pm_ratio_s
+	10.0	... pm_ratio_s
 );

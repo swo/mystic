@@ -78,7 +78,7 @@ po_teas = [
     s('N+'), s('null'), C_LIM_N, 5  % 5; output is N2
     s('Fe+'), s('Fe-'), C_LIM_FE, 1 % 0.1; had to adjust from HWvC on account of units (60.0)
     s('S+'), s('S-'), C_LIM_S, 8 % note HWvC have 0.03 mM (= 30 uM)
-    s('CO2'), s('CH4'), C_LIM_CO2, 8 % output is methane
+    s('CO2'), s('CH4'), 0.0, 8 % output is methane
 ];
 [n_po_teas, ~] = size(po_teas);
 
@@ -158,14 +158,12 @@ function [ma_op_rates, tea_rates] = rates(concs_row)
 
     ma_op_rates = ma_op_rc .* ma_op_reac1 .* ma_op_reac2;
 
-    % compute the fraction of electrons consumed by each TEA
+    % compute the fraction of electrons consumed by each TEA, then give the rest to methanogenesis
     f = zeros(1, n_po_teas);
-    for i = 1: n_po_teas
+    for i = 1: n_po_teas - 1
         f(i) = (1.0 - sum(f)) * min(1, concs_row(po_tea_i(i)) / po_tea_clim(i));
     end
-
-    % assign whatever fraction is left to methanogenesis
-    %f_methanogenesis = 1.0 - sum(f);
+    f(end) = 1.0 - sum(f);
 
     % weight each TEA fraction by their # electrons
     tea_rates = po_rc * concs_row(s('C')) * f ./ po_tea_e;
@@ -192,7 +190,7 @@ function [conc_fluxes] = flux(~, concs_vector)
     co2_source = fixed_co2_diffusion * (fixed_co2_level - concs(1, s('CO2')));
     conc_fluxes(1, s('CO2')) = conc_fluxes(1, s('CO2')) + co2_source;
     
-    % apply the fixed methane level at the termocline
+    % apply the fixed methane level at the thermocline
     methane_source = fixed_methane_diffusion * (fixed_top_methane_level - concs(1, s('CH4')));
     conc_fluxes(1, s('CH4')) = conc_fluxes(1, s('CH4')) + methane_source;
 
