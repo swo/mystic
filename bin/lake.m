@@ -256,7 +256,7 @@ concs_history = reshape(y, n_time_slices, n_x, n_species);
 rates_history = zeros(n_time_slices, n_x, n_ma_op_rxns + n_po_teas);
 for time = 1: n_time_slices
     for x = 1: n_x
-        [rates_history(time, x, 1:n_ma_op_rxns), rates_history(time, x, n_ma_op_rxns + 1:end)] = rates(squeeze(concs_history(time, x, :))');
+        [rates_history(time, x, 1:n_ma_op_rxns), ~, rates_history(time, x, n_ma_op_rxns + 1:end)] = rates(squeeze(concs_history(time, x, :))');
     end
 end
 

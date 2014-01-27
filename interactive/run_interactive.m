@@ -6,6 +6,7 @@ addpath('../bin');
 
 run_it = 1; % run the simulation again?
 show_c = 1; % show the carbon species?
+save_data = 1;  % save the time, rate, and concs data?
 
 % grab the species map
 s = species_map();
@@ -13,6 +14,10 @@ s = species_map();
 % if required, rerun the simulation
 if run_it
     run_interactive_defaults;
+end
+
+if save_data
+    write_data_to_files
 end
 
 % prepare lists of the curves to be drawn
