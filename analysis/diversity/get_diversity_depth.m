@@ -108,4 +108,4 @@ obs = obsdiversity(:, 2);
 
 clf;
 plotyy(depths, obs, depths, eff_n_rates(end, 1: end - 1))
-print('plots/diversity_depth.pdf', '-dpdf')
+print('diversity_depth.pdf', '-dpdf')
