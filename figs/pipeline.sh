@@ -1,3 +1,3 @@
 #!/bin/bash
 
-matlab -nosplash -nodesktop -r 'make_end_plots; exit'
+matlab -nosplash -nodesktop -r 'make_plots; exit'
