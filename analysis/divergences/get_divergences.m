@@ -31,4 +31,4 @@ h = pcolor(divergences);
 axis square
 set(h, 'edgecolor', 'none');
 
-print('plots/divergences.pdf', '-dpdf')
+print('divergences.pdf', '-dpdf')
