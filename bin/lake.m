@@ -1,4 +1,4 @@
-function [time_slices, concs_history, rates_history] = lake(NITROGEN_RATIO, CARBON_RATIO, FIXED_OXYGEN_LEVEL, FIXED_OXYGEN_DIFFUSION, FIXED_CO2_LEVEL, FIXED_BOTTOM_METHANE, T_MAX, FE_PRECIPITATION, DIFF_CONST_COMP, MA_OP_O_FE_RATE_CONST, MA_OP_O_N_RATE_CONST, MA_OP_O_S_RATE_CONST, MA_OP_FE_N_RATE_CONST, MA_OP_CH4_O_RATE_CONST, MA_OP_CH4_S_RATE_CONST, PRIMARY_OX_RATE_CONST, C_LIM_O, C_LIM_N, C_LIM_FE, C_LIM_S, CONCS0_C, CONCS0_O, CONCS0_NTOT, PM_RATIO_N, CONCS0_FETOT, PM_RATIO_FE, CONCS0_STOT, PM_RATIO_S)
+function [time_slices, concs_history, rates_history] = lake(NITROGEN_RATIO, CARBON_RATIO, FIXED_OXYGEN_LEVEL, FIXED_OXYGEN_DIFFUSION, FIXED_BOTTOM_METHANE, T_MAX, FE_PRECIPITATION, DIFF_CONST_COMP, MA_OP_O_FE_RATE_CONST, MA_OP_O_N_RATE_CONST, MA_OP_O_S_RATE_CONST, MA_OP_FE_N_RATE_CONST, MA_OP_CH4_O_RATE_CONST, MA_OP_CH4_S_RATE_CONST, PRIMARY_OX_RATE_CONST, C_LIM_O, C_LIM_N, C_LIM_FE, C_LIM_S, CONCS0_C, CONCS0_O, CONCS0_NTOT, PM_RATIO_N, CONCS0_FETOT, PM_RATIO_FE, CONCS0_STOT, PM_RATIO_S)
 %% Constants
 % These are constants that make assertions about the actual system
 
@@ -9,10 +9,7 @@ diffusion_constant_per_compartment2 = DIFF_CONST_COMP; % input diffusion constan
 fixed_oxygen_level = FIXED_OXYGEN_LEVEL;  % oxygen level at thermocline
 fixed_oxygen_diffusion = FIXED_OXYGEN_DIFFUSION;   % diffusion from oxygen above the thermocline
 
-fixed_co2_level = FIXED_CO2_LEVEL;  % CO2 level at thermocline
-fixed_co2_diffusion = fixed_oxygen_diffusion;
-
-fixed_top_methane = 0.0;
+fixed_top_methane_level = 0.0;
 fixed_bottom_methane_level = FIXED_BOTTOM_METHANE;
 fixed_methane_diffusion = fixed_oxygen_diffusion;
 
@@ -39,11 +36,7 @@ diffusion_constant = diffusion_constant_per_compartment2 * n_x ^ 2;
 % and down; +0.1 means a molecule is 10% as likely to go down as to go up;
 % -0.1 means 10% more likley to go up than down
 precipitation_constant_input = [
-    s('N-'), 0.0
-    s('S-'), 0.0
     s('Fe+'), FE_PRECIPITATION
-    s('C'), 0.0
-    s('CO2'), 0.0
 ];
 
 %% Reaction constants
@@ -61,7 +54,7 @@ ma_op_rxns = [
     2, s('O'), 1, s('N-'), 1, s('N+'), MA_OP_O_N_RATE_CONST   % k_4^sr = 5e6 M-1 yr-1
     2, s('O'), 1, s('S-'), 1, s('S+'), MA_OP_O_S_RATE_CONST  % k_5^sr = 1.6e5 M-1 yr-1
     5, s('Fe-'), 1, s('N+'), 5, s('Fe+'), MA_OP_FE_N_RATE_CONST   % swo> my guess
-    1, s('CH4'), 2, s('O'), 1, s('CO2'), MA_OP_CH4_O_RATE_CONST    % k_9^sr = 1e10 M-1 yr-1
+    1, s('CH4'), 2, s('O'), 1, s('null'), MA_OP_CH4_O_RATE_CONST    % k_9^sr = 1e10 M-1 yr-1
     1, s('CH4'), 1, s('S+'), 1, s('S-'), MA_OP_CH4_S_RATE_CONST    % k_10^sr = 1e5 M-1 yr-1
 ];
 [n_ma_op_rxns, ~] = size(ma_op_rxns);
@@ -78,7 +71,7 @@ po_teas = [
     s('N+'), s('null'), C_LIM_N, 5  % 5; output is N2
     s('Fe+'), s('Fe-'), C_LIM_FE, 1 % 0.1; had to adjust from HWvC on account of units (60.0)
     s('S+'), s('S-'), C_LIM_S, 8 % note HWvC have 0.03 mM (= 30 uM)
-    s('CO2'), s('CH4'), 0.0, 8 % output is methane
+    s('null'), s('CH4'), 0.0, 8 % output is methane
 ];
 [n_po_teas, ~] = size(po_teas);
 
@@ -115,7 +108,7 @@ concs0(:, s('S-')) = CONCS0_SMINUS;
 
 % make the precipitation constants
 precipitation_constants = zeros([1 n_species]);
-for i = 1: length(precipitation_constant_input)
+for i = 1: size(precipitation_constant_input, 1)
     idx = precipitation_constant_input(i, 1);
     val = precipitation_constant_input(i, 2);
 
@@ -187,10 +180,6 @@ function [conc_fluxes] = flux(~, concs_vector)
     conc_fluxes(1, s('O')) = conc_fluxes(1, s('O')) + oxygen_source;
     conc_fluxes(1, s('C')) = conc_fluxes(1, s('C')) + carbon_ratio * oxygen_source;
     
-    % apply the fixed co2 term
-    co2_source = fixed_co2_diffusion * (fixed_co2_level - concs(1, s('CO2')));
-    conc_fluxes(1, s('CO2')) = conc_fluxes(1, s('CO2')) + co2_source;
-    
     % apply the fixed methane level at the thermocline
     methane_source = fixed_methane_diffusion * (fixed_top_methane_level - concs(1, s('CH4')));
     conc_fluxes(1, s('CH4')) = conc_fluxes(1, s('CH4')) + methane_source;
@@ -212,7 +201,6 @@ function [conc_fluxes] = flux(~, concs_vector)
         conc_fluxes(x, :) = conc_fluxes(x, :) + accumarray(po_tea_prod_i, tea_rates, [n_species, 1])';
         
         conc_fluxes(x, s('C')) = conc_fluxes(x, s('C')) - po_carbon_rate;
-        conc_fluxes(x, s('CO2')) = conc_fluxes(x, s('CO2')) + po_carbon_rate;
         conc_fluxes(x, s('N-')) = conc_fluxes(x, s('N-')) + nitrogen_ratio * po_carbon_rate;
         
         % diffusion      
