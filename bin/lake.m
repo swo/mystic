@@ -1,4 +1,4 @@
-function [time_slices, concs_history, rates_history] = lake(NITROGEN_RATIO, CARBON_RATIO, FIXED_OXYGEN_LEVEL, FIXED_OXYGEN_DIFFUSION, FIXED_CO2_LEVEL, FIXED_TOP_METHANE, FIXED_BOTTOM_METHANE, T_MAX, FE_PRECIPITATION, DIFF_CONST_COMP, MA_OP_O_FE_RATE_CONST, MA_OP_O_N_RATE_CONST, MA_OP_O_S_RATE_CONST, MA_OP_FE_N_RATE_CONST, MA_OP_CH4_O_RATE_CONST, MA_OP_CH4_S_RATE_CONST, PRIMARY_OX_RATE_CONST, C_LIM_O, C_LIM_N, C_LIM_FE, C_LIM_S, C_LIM_CO2, CONCS0_C, CONCS0_O, CONCS0_NTOT, PM_RATIO_N, CONCS0_FETOT, PM_RATIO_FE, CONCS0_STOT, PM_RATIO_S)
+function [time_slices, concs_history, rates_history] = lake(NITROGEN_RATIO, CARBON_RATIO, FIXED_OXYGEN_LEVEL, FIXED_OXYGEN_DIFFUSION, FIXED_CO2_LEVEL, FIXED_BOTTOM_METHANE, T_MAX, FE_PRECIPITATION, DIFF_CONST_COMP, MA_OP_O_FE_RATE_CONST, MA_OP_O_N_RATE_CONST, MA_OP_O_S_RATE_CONST, MA_OP_FE_N_RATE_CONST, MA_OP_CH4_O_RATE_CONST, MA_OP_CH4_S_RATE_CONST, PRIMARY_OX_RATE_CONST, C_LIM_O, C_LIM_N, C_LIM_FE, C_LIM_S, CONCS0_C, CONCS0_O, CONCS0_NTOT, PM_RATIO_N, CONCS0_FETOT, PM_RATIO_FE, CONCS0_STOT, PM_RATIO_S)
 %% Constants
 % These are constants that make assertions about the actual system
 
@@ -12,7 +12,7 @@ fixed_oxygen_diffusion = FIXED_OXYGEN_DIFFUSION;   % diffusion from oxygen above
 fixed_co2_level = FIXED_CO2_LEVEL;  % CO2 level at thermocline
 fixed_co2_diffusion = fixed_oxygen_diffusion;
 
-fixed_top_methane_level = FIXED_TOP_METHANE;    % methane at thermocline
+fixed_top_methane = 0.0;
 fixed_bottom_methane_level = FIXED_BOTTOM_METHANE;
 fixed_methane_diffusion = fixed_oxygen_diffusion;
 
