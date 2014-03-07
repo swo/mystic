@@ -27,8 +27,10 @@ for param_i, (param_name, base_val) in enumerate(base_params):
         val_list.append([val_i, this_val])
 
         # add the filename to the list of parameters
-        out_fn = conf.get('Sensitivity analysis', 'matlab_data_fn_mask').format(param_i, val_i)
-        these_params.append(out_fn)
+        rates_fn = conf.get('Sensitivity analysis', 'matlab_rates_fn_mask').format(param_i, val_i)
+        concs_fn = conf.get('Sensitivity analysis', 'matlab_concs_fn_mask').format(param_i, val_i)
+        these_params.append(rates_fn)
+        these_params.append(concs_fn)
 
         # stringify the filename
         params_string = ','.join([str(x) for x in these_params])

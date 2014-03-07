@@ -63,7 +63,7 @@ for param_i, param_name in enumerate(params):
     single_values = np.empty((len(rate_names), len(param_vals), 3))
     for val_i, param_val in enumerate(param_vals):
         # get the data
-        fn = conf.get('Sensitivity analysis', 'analysis_data_fn_mask').format(param_i, val_i)
+        fn = conf.get('Sensitivity analysis', 'analysis_rates_fn_mask').format(param_i, val_i)
         dat = np.genfromtxt(fn, delimiter=',')
         x = range(dat.shape[0])
 
