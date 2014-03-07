@@ -41,11 +41,11 @@ slopes = lambda x, ys: [slope(x, y) for y in ys]
 
 # read in the rate names
 conf = ConfigParser.ConfigParser()
-conf.read('sens.cfg')
+conf.read('../lake.cfg')
 rate_names = [name for index, name in sorted(conf.items('Rate names'))]
 
 # read in the parameter names
-params = [param for param, base_val in conf.items('Simulation')]
+params = [param for param, base_val in conf.items('Simulation parameters')]
 
 # loop over parameters
 out_rows = []
@@ -53,7 +53,7 @@ for param_i, param_name in enumerate(params):
     out_row = []
 
     # get values of the parameter
-    fn = conf.get('Scripting', 'valmap_mask').format(param_i)
+    fn = conf.get('Sensitivity analysis', 'valmap_mask').format(param_i)
     with open(fn, 'r') as f:
         r = csv.reader(f)
         param_vals = np.array([row[1] for row in r], dtype=float)
@@ -63,7 +63,7 @@ for param_i, param_name in enumerate(params):
     single_values = np.empty((len(rate_names), len(param_vals), 3))
     for val_i, param_val in enumerate(param_vals):
         # get the data
-        fn = conf.get('Scripting', 'analysis_data_fn_mask').format(param_i, val_i)
+        fn = conf.get('Sensitivity analysis', 'analysis_data_fn_mask').format(param_i, val_i)
         dat = np.genfromtxt(fn, delimiter=',')
         x = range(dat.shape[0])
 
