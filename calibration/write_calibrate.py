@@ -23,6 +23,14 @@ if not os.path.exists('data/obs.csv'):
 conf = ConfigParser.ConfigParser()
 conf.read('../lake.cfg')
 
+# check that all the parameters listed as varied are actual parameters in the simulation
+calibration_names = [name for name, value in conf.items('Calibration parameters')]
+simulation_names = [name for name, value in conf.items('Simulation parameters')]
+missing_names = set(calibration_names) - set(simulation_names)
+
+if missing_names:
+    raise RuntimeError('some calibration parameters are not simulation parameters: {0}'.format(missing_names))
+
 # get the information about the varied values
 varied_bounds = {name: [float(x) for x in value.split(',')] for name, value in conf.items('Calibration parameters')}
 
