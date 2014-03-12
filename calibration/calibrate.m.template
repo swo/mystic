@@ -37,15 +37,17 @@ function [] = log_time(n)
 end
 
 function [d] = objective_f(params)
-    % please note date and time (and params) in the ship's log.  --Spock
-    log_time(step);
-    dlmwrite(log_fn, params, '-append', 'precision', param_precision);
-
     % convert params into a cell
     params_cell = num2cell(params);
 
     % convert params array into a bunch of variables
     [__VARIED_NAMES__] = deal(params_cell{:});
+
+    % "Please note the date and time [and params] in the ship's log."  --Spock
+    % keep track of the list of params being varied as well as the entire list of parameters
+    log_time(step);
+    dlmwrite(log_fn, params, '-append', 'precision', param_precision);
+    dlmwrite(log_fn, [__CALL_LIST__], '-append', 'precision', param_precision);
 
     % get the output of the model
     [time_slices, concs_history, rates_history] = lake(__CALL_LIST__);
