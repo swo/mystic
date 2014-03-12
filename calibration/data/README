@@ -1,2 +1,10 @@
 Columns in obs.csv are 
 DO,NO3,SO4 (all uM)
+
+columns in rates_observed.txt are
+ammonium_ox
+sulfide_ox
+iron_ox_nitrate
+methane_ox_oxygen
+methane_ox_sulfate
+aerobes
