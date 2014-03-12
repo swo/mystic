@@ -50,13 +50,14 @@ n_varied = str(len(varied))
 call_list = ", ".join([str(param) for param in params])
 lbs = ", ".join([str(param.lb) for param in varied])
 ubs = ", ".join([str(param.ub) for param in varied])
+method = "'{0}'".format(conf.get('Calibration settings', 'Method'))
 
 # write the base calibration script
 with open('calibrate.m.template', 'r') as f:
     template = f.read()
 
 script_content = template
-for pattern, replacement in [('__INITIAL_VARIED_VALUES__', initial_varied_list), ('__VARIED_NAMES__', varied_names), ('__N_VARIED__', n_varied), ('__CALL_LIST__', call_list), ('__LBS__', lbs), ('__UBS__', ubs)]:
+for pattern, replacement in [('__METHOD__', method), ('__INITIAL_VARIED_VALUES__', initial_varied_list), ('__VARIED_NAMES__', varied_names), ('__N_VARIED__', n_varied), ('__CALL_LIST__', call_list), ('__LBS__', lbs), ('__UBS__', ubs)]:
     script_content = re.sub(pattern, replacement, script_content)
 
 with open('calibrate.m', 'w') as f:
