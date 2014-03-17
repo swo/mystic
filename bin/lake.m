@@ -175,10 +175,18 @@ function [conc_fluxes] = flux(~, concs_vector)
 
     conc_fluxes = zeros(n_x, n_species);
     
-    % apply the fixed oxygen term
-    oxygen_source = fixed_oxygen_diffusion * (fixed_oxygen_level - concs(1, s('O')));
-    conc_fluxes(1, s('O')) = conc_fluxes(1, s('O')) + oxygen_source;
-    conc_fluxes(1, s('C')) = conc_fluxes(1, s('C')) + carbon_ratio * oxygen_source;
+    % apply the fixed oxygen term to compartment 1
+    oxygen_source1 = fixed_oxygen_diffusion * (fixed_oxygen_level - concs(1, s('O')));
+    conc_fluxes(1, s('O')) = conc_fluxes(1, s('O')) + oxygen_source1;
+    conc_fluxes(1, s('C')) = conc_fluxes(1, s('C')) + carbon_ratio * oxygen_source1;
+     % apply the fixed oxygen term to compartment 1
+    oxygen_source2 = fixed_oxygen_diffusion * (fixed_oxygen_level - concs(2, s('O')));
+    conc_fluxes(2, s('O')) = conc_fluxes(2, s('O')) + oxygen_source2;
+    conc_fluxes(2, s('C')) = conc_fluxes(2, s('C')) + carbon_ratio * oxygen_source2;
+    
+    oxygen_source3 = fixed_oxygen_diffusion * (fixed_oxygen_level - concs(3, s('O')));
+    conc_fluxes(3, s('O')) = conc_fluxes(2, s('O')) + oxygen_source3;
+    conc_fluxes(3, s('C')) = conc_fluxes(3, s('C')) + carbon_ratio * oxygen_source3;
     
     % apply the fixed methane level at the thermocline
     methane_source = fixed_methane_diffusion * (fixed_top_methane_level - concs(1, s('CH4')));
