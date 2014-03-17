@@ -7,7 +7,6 @@ nitrogen_ratio = NITROGEN_RATIO;  % N- released per C degraded, 0.15 from Redfie
 diffusion_constant_per_compartment2 = DIFF_CONST_COMP; % input diffusion constant
 fixed_oxygen_level = FIXED_OXYGEN_LEVEL;  % oxygen level at thermocline
 fixed_oxygen_diffusion = FIXED_OXYGEN_DIFFUSION;   % diffusion from oxygen above the thermocline
-fixed_oxygen_compartments = 1;
 
 fixed_top_methane_level = 0.0;
 fixed_bottom_methane_level = FIXED_BOTTOM_METHANE;
@@ -176,13 +175,13 @@ function [conc_fluxes] = flux(~, concs_vector)
     conc_fluxes = zeros(n_x, n_species);
 
     % apply the fixed oxygen term
-    oxygen_source = fixed_oxygen_diffusion * (fixed_oxygen_level - concs(fixed_oxygen_compartments, s('O')));
-    conc_fluxes(fixed_oxygen_compartments, s('O')) = conc_fluxes(fixed_oxygen_compartments, s('O')) + oxygen_source;
+    oxygen_source = fixed_oxygen_diffusion * (fixed_oxygen_level - concs(1, s('O')));
+    conc_fluxes(1, s('O')) = conc_fluxes(1, s('O')) + oxygen_source;
 
     % apply fixed carbon
     % swo> used oxygen here, was lazy
-    carbon_source = fixed_oxygen_diffusion * (FIXED_CARBON_LEVEL - concs(fixed_oxygen_compartments, s('C')));
-    conc_fluxes(fixed_oxygen_compartments, s('C')) = conc_fluxes(fixed_oxygen_compartments, s('C')) + carbon_source;
+    carbon_source = fixed_oxygen_diffusion * (FIXED_CARBON_LEVEL - concs(1, s('C')));
+    conc_fluxes(1, s('C')) = conc_fluxes(1, s('C')) + carbon_source;
     
     % apply the fixed methane level at the thermocline
     methane_source = fixed_methane_diffusion * (fixed_top_methane_level - concs(1, s('CH4')));
