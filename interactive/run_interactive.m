@@ -4,8 +4,13 @@
 % include the primary matlab scripts
 addpath('../bin');
 
-run_it = 1; % run the simulation again?
+run_it = 0; % run the simulation again?
+
+show_concs = 0; % show the concentrations?
 show_c = 1; % show the carbon species?
+
+show_rates = 1; % show the rates data?
+
 save_data = 1;  % save the time, rate, and concs data?
 
 % grab the species map
@@ -20,38 +25,57 @@ if save_data
     write_data_to_files
 end
 
-% prepare lists of the curves to be drawn
-if show_c
-    to_show = {'O', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-', 'CH4'};
-    i_bold_max = 2;
-else
-    to_show = {'O', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-'};
-    i_bold_max = 1;
-end
-idx = cellfun(@(x) s(x), to_show);
-
-% clear the plot
-clf;
-
-% show the final concentration curves
-% plot all the curves on one graph, bolding one line
-hold all;
-for i = idx
-    if i <= i_bold_max
-        plot(concs_history(end, :, i), 'LineWidth', 2)
+if show_concs
+    % prepare lists of the curves to be drawn
+    if show_c
+        to_show = {'O', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-', 'CH4'};
+        i_bold_max = 2;
     else
-        plot(concs_history(end, :, i))
+        to_show = {'O', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-'};
+        i_bold_max = 1;
+    end
+    idx = cellfun(@(x) s(x), to_show);
+
+    % clear the plot
+    clf;
+
+    % show the final concentration curves
+    % plot all the curves on one graph, bolding one line
+    hold all;
+    for i = idx
+        if i <= i_bold_max
+            plot(concs_history(end, :, i), 'LineWidth', 2)
+        else
+            plot(concs_history(end, :, i))
+        end
+    end
+    hold off;
+
+    % attach labels
+    xlabel('depth');
+    ylabel('concentration');
+
+    % attach legend
+    if show_c
+        legend('O', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-', 'CH4');
+    else
+        legend('O', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-');
     end
 end
-hold off;
 
-% attach labels
-xlabel('depth');
-ylabel('concentration');
+if show_rates
+    idx = [7 8 9 10 6 5];
 
-% attach legend
-if show_c
-    legend('O', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-', 'CH4');
-else
-    legend('O', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-');
+    clf;
+    hold all;
+    for i = idx
+        plot(rates_history(end, :, i));
+    end
+    hold off;
+
+    % attach labels
+    xlabel('depth');
+    ylabel('rate');
+
+    legend('aer het', 'nit red', 'iron red', 'sulf red', 'metht sulf', 'metht oxy');
 end

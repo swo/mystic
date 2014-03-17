@@ -24,6 +24,6 @@
 	10.0,	... pm_ratio_n
 	100.0,	... concs0_fetot
 	10.0,	... pm_ratio_fe
-	200.0,	... concs0_stot
+	300.0,	... concs0_stot
 	10.0	... pm_ratio_s
 );
