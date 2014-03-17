@@ -1,9 +1,8 @@
-function [time_slices, concs_history, rates_history] = lake(NITROGEN_RATIO, CARBON_RATIO, FIXED_OXYGEN_LEVEL, FIXED_OXYGEN_DIFFUSION, FIXED_BOTTOM_METHANE, T_MAX, FE_PRECIPITATION, DIFF_CONST_COMP, MA_OP_O_FE_RATE_CONST, MA_OP_O_N_RATE_CONST, MA_OP_O_S_RATE_CONST, MA_OP_FE_N_RATE_CONST, MA_OP_CH4_O_RATE_CONST, MA_OP_CH4_S_RATE_CONST, PRIMARY_OX_RATE_CONST, C_LIM_O, C_LIM_N, C_LIM_FE, C_LIM_S, CONCS0_C, CONCS0_O, CONCS0_NTOT, PM_RATIO_N, CONCS0_FETOT, PM_RATIO_FE, CONCS0_STOT, PM_RATIO_S)
+function [time_slices, concs_history, rates_history] = lake(NITROGEN_RATIO, FIXED_CARBON_LEVEL, FIXED_OXYGEN_LEVEL, FIXED_OXYGEN_DIFFUSION, FIXED_BOTTOM_METHANE, T_MAX, FE_PRECIPITATION, DIFF_CONST_COMP, MA_OP_O_FE_RATE_CONST, MA_OP_O_N_RATE_CONST, MA_OP_O_S_RATE_CONST, MA_OP_FE_N_RATE_CONST, MA_OP_CH4_O_RATE_CONST, MA_OP_CH4_S_RATE_CONST, PRIMARY_OX_RATE_CONST, C_LIM_O, C_LIM_N, C_LIM_FE, C_LIM_S, CONCS0_C, CONCS0_O, CONCS0_NTOT, PM_RATIO_N, CONCS0_FETOT, PM_RATIO_FE, CONCS0_STOT, PM_RATIO_S)
 %% Constants
 % These are constants that make assertions about the actual system
 
 nitrogen_ratio = NITROGEN_RATIO;  % N- released per C degraded, 0.15 from Redfield
-carbon_ratio = CARBON_RATIO; % C dumped per O dumped
 
 diffusion_constant_per_compartment2 = DIFF_CONST_COMP; % input diffusion constant
 fixed_oxygen_level = FIXED_OXYGEN_LEVEL;  % oxygen level at thermocline
@@ -179,7 +178,11 @@ function [conc_fluxes] = flux(~, concs_vector)
     % apply the fixed oxygen term
     oxygen_source = fixed_oxygen_diffusion * (fixed_oxygen_level - concs(fixed_oxygen_compartments, s('O')));
     conc_fluxes(fixed_oxygen_compartments, s('O')) = conc_fluxes(fixed_oxygen_compartments, s('O')) + oxygen_source;
-    conc_fluxes(fixed_oxygen_compartments, s('C')) = conc_fluxes(fixed_oxygen_compartments, s('C')) + carbon_ratio * oxygen_source;
+
+    % apply fixed carbon
+    % swo> used oxygen here, was lazy
+    carbon_source = fixed_oxygen_diffusion * (FIXED_CARBON_LEVEL - concs(fixed_oxygen_compartments, s('C')));
+    conc_fluxes(fixed_oxygen_compartments, s('C')) = conc_fluxes(fixed_oxygen_compartments, s('C')) + carbon_source;
     
     % apply the fixed methane level at the thermocline
     methane_source = fixed_methane_diffusion * (fixed_top_methane_level - concs(1, s('CH4')));

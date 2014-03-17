@@ -13,7 +13,7 @@ show_rates = 1; % show the rates data?
 
 save_data = 1;  % save the time, rate, and concs data?
 
-show_time = 90;
+show_time = 100;
 
 clf;
 
