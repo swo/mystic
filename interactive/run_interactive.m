@@ -6,12 +6,16 @@ addpath('../bin');
 
 run_it = 0; % run the simulation again?
 
-show_concs = 0; % show the concentrations?
+show_concs = 1; % show the concentrations?
 show_c = 1; % show the carbon species?
 
 show_rates = 1; % show the rates data?
 
 save_data = 1;  % save the time, rate, and concs data?
+
+show_time = 90;
+
+clf;
 
 % grab the species map
 s = species_map();
@@ -26,6 +30,7 @@ if save_data
 end
 
 if show_concs
+    subplot(1,2,1);
     % prepare lists of the curves to be drawn
     if show_c
         to_show = {'O', 'N+', 'N-', 'S+', 'S-', 'Fe+', 'Fe-', 'CH4'};
@@ -37,16 +42,16 @@ if show_concs
     idx = cellfun(@(x) s(x), to_show);
 
     % clear the plot
-    clf;
+    %clf;
 
     % show the final concentration curves
     % plot all the curves on one graph, bolding one line
     hold all;
     for i = idx
         if i <= i_bold_max
-            plot(concs_history(end, :, i), 'LineWidth', 2)
+            plot(concs_history(show_time, :, i), 'LineWidth', 2)
         else
-            plot(concs_history(end, :, i))
+            plot(concs_history(show_time, :, i))
         end
     end
     hold off;
@@ -64,12 +69,13 @@ if show_concs
 end
 
 if show_rates
+    subplot(1,2,2);
     idx = [7 8 9 10 6 5];
 
-    clf;
+    %clf;
     hold all;
     for i = idx
-        plot(rates_history(end, :, i));
+        plot(rates_history(show_time, :, i));
     end
     hold off;
 

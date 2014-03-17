@@ -2,8 +2,8 @@
 	0.1,	... nitrogen_ratio
 	9.0,	... carbon_ratio
 	75.0,	... fixed_oxygen_level
-	10000.0,	... fixed_oxygen_diffusion
-	250.0,	... fixed_bottom_methane
+	5000.0,	... fixed_oxygen_diffusion
+	200.0,	... fixed_bottom_methane
 	1.0,	... t_max
 	0.1,	... fe_precipitation
 	0.75,	... diff_const_comp
