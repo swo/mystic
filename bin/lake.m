@@ -7,7 +7,7 @@ nitrogen_ratio = NITROGEN_RATIO;  % N- released per C degraded, 0.15 from Redfie
 diffusion_constant_per_compartment2 = DIFF_CONST_COMP; % input diffusion constant
 fixed_oxygen_level = FIXED_OXYGEN_LEVEL;  % oxygen level at thermocline
 fixed_oxygen_diffusion = FIXED_OXYGEN_DIFFUSION;   % diffusion from oxygen above the thermocline
-fixed_oxygen_compartments = 1:3;
+fixed_oxygen_compartments = 1;
 
 fixed_top_methane_level = 0.0;
 fixed_bottom_methane_level = FIXED_BOTTOM_METHANE;
