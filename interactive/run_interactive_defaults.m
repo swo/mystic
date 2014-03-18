@@ -1,18 +1,18 @@
 [time_slices, concs_history, rates_history] = lake( ...
 	0.1,	... nitrogen_ratio
-	1000.0,	... fixed_carbon_level
-	70.0,	... fixed_oxygen_level
-	5000.0,	... fixed_oxygen_diffusion
-	50.0,	... fixed_bottom_methane
-	25.0,	... t_max
+	5000.0,	... fixed_carbon_level
+	100.0,	... fixed_oxygen_level
+	10000.0,	... fixed_oxygen_diffusion
+	250.0,	... fixed_bottom_methane
+	1.0,	... t_max
 	0.1,	... fe_precipitation
-	0.75,	... diff_const_comp
+	1.0,	... diff_const_comp
 	10.0,	... ma_op_o_fe_rate_const
 	5.0,	... ma_op_o_n_rate_const
 	0.16,	... ma_op_o_s_rate_const
 	0.01,	... ma_op_fe_n_rate_const
 	10000.0,	... ma_op_ch4_o_rate_const
-	0.1,	... ma_op_ch4_s_rate_const
+	0.01,	... ma_op_ch4_s_rate_const
 	1,	... primary_ox_rate_const
 	20.0,	... c_lim_o
 	5.0,	... c_lim_n
