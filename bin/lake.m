@@ -1,4 +1,4 @@
-function [time_slices, concs_history, rates_history] = lake(NITROGEN_SOURCE, NITROGEN_RATIO, FIXED_CARBON_LEVEL, FIXED_OXYGEN_LEVEL, FIXED_OXYGEN_DIFFUSION, FIXED_BOTTOM_METHANE, T_MAX, FE_PRECIPITATION, DIFF_CONST_COMP, MA_OP_O_FE_RATE_CONST, MA_OP_O_N_RATE_CONST, MA_OP_O_S_RATE_CONST, MA_OP_FE_N_RATE_CONST, MA_OP_CH4_O_RATE_CONST, MA_OP_CH4_S_RATE_CONST, PRIMARY_OX_RATE_CONST, C_LIM_O, C_LIM_N, C_LIM_FE, C_LIM_S, CONCS0_C, CONCS0_O, CONCS0_NTOT, PM_RATIO_N, CONCS0_FETOT, PM_RATIO_FE, CONCS0_STOT, PM_RATIO_S)
+function [time_slices, concs_history, rates_history] = lake(OXYGEN_BUBBLE_RATE, NITROGEN_SOURCE, NITROGEN_RATIO, FIXED_CARBON_LEVEL, FIXED_OXYGEN_LEVEL, FIXED_OXYGEN_DIFFUSION, FIXED_BOTTOM_METHANE, T_MAX, FE_PRECIPITATION, DIFF_CONST_COMP, MA_OP_O_FE_RATE_CONST, MA_OP_O_N_RATE_CONST, MA_OP_O_S_RATE_CONST, MA_OP_FE_N_RATE_CONST, MA_OP_CH4_O_RATE_CONST, MA_OP_CH4_S_RATE_CONST, PRIMARY_OX_RATE_CONST, C_LIM_O, C_LIM_N, C_LIM_FE, C_LIM_S, CONCS0_C, CONCS0_O, CONCS0_NTOT, PM_RATIO_N, CONCS0_FETOT, PM_RATIO_FE, CONCS0_STOT, PM_RATIO_S)
 %% Constants
 % These are constants that make assertions about the actual system
 
@@ -173,6 +173,9 @@ function [conc_fluxes] = flux(~, concs_vector)
     concs = reshape(concs_vector, [n_x, n_species]);
 
     conc_fluxes = zeros(n_x, n_species);
+
+    % apply the oxygen bubbles
+    conc_fluxes(:, s('O')) = conc_fluxes(:, s('O')) + OXYGEN_BUBBLE_RATE;
 
     % apply the nitrogen source
     conc_fluxes(1, s('N+')) = conc_fluxes(1, s('N+')) + NITROGEN_SOURCE;

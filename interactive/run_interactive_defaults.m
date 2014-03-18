@@ -1,9 +1,10 @@
 [time_slices, concs_history, rates_history] = lake( ...
-	2000.0,	... nitrogen_source
+	1000.0,	... oxygen_bubble_rate
+	1000.0,	... nitrogen_source
 	0.1,	... nitrogen_ratio
 	5000.0,	... fixed_carbon_level
 	100.0,	... fixed_oxygen_level
-	1000.0,	... fixed_oxygen_diffusion
+	10000.0,	... fixed_oxygen_diffusion
 	250.0,	... fixed_bottom_methane
 	1.0,	... t_max
 	0.1,	... fe_precipitation
