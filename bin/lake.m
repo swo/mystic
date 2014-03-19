@@ -181,8 +181,10 @@ function [conc_fluxes] = flux(~, concs_vector)
     conc_fluxes(1, s('N+')) = conc_fluxes(1, s('N+')) + NITROGEN_SOURCE;
 
     % apply the fixed oxygen term
-    oxygen_source = fixed_oxygen_diffusion * (fixed_oxygen_level - concs(1, s('O')));
-    conc_fluxes(1, s('O')) = conc_fluxes(1, s('O')) + oxygen_source;
+    %oxygen_source = fixed_oxygen_diffusion * (fixed_oxygen_level - concs(1, s('O')));
+    %conc_fluxes(1, s('O')) = conc_fluxes(1, s('O')) + oxygen_source;
+    conc_fluxes(1, s('O')) = conc_fluxes(1, s('O')) + fixed_oxygen_level;
+
 
     % apply fixed carbon
     % swo> used oxygen here, was lazy
