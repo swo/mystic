@@ -185,11 +185,11 @@ function [conc_fluxes] = flux(~, concs_vector)
     %conc_fluxes(1, s('O')) = conc_fluxes(1, s('O')) + oxygen_source;
     conc_fluxes(1, s('O')) = conc_fluxes(1, s('O')) + fixed_oxygen_level;
 
-
     % apply fixed carbon
     % swo> used oxygen here, was lazy
-    carbon_source = fixed_oxygen_diffusion * (FIXED_CARBON_LEVEL - concs(1, s('C')));
-    conc_fluxes(1, s('C')) = conc_fluxes(1, s('C')) + carbon_source;
+    %carbon_source = fixed_oxygen_diffusion * (FIXED_CARBON_LEVEL - concs(1, s('C')));
+    %conc_fluxes(1, s('C')) = conc_fluxes(1, s('C')) + carbon_source;
+    conc_fluxes(1, s('C')) = conc_fluxes(1, s('C')) + FIXED_CARBON_LEVEL;
     
     % apply the fixed methane level at the thermocline
     methane_source = fixed_methane_diffusion * (fixed_top_methane_level - concs(1, s('CH4')));

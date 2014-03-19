@@ -2,10 +2,10 @@
 	0.0,	... oxygen_bubble_rate
 	800.0,	... nitrogen_source
 	0.1,	... nitrogen_ratio
-	5000.0,	... fixed_carbon_level
-	2.4e4,	... fixed_oxygen_level
+	75000.0,	... fixed_carbon_level
+	2.2e4,	... fixed_oxygen_level
 	10000.0,	... fixed_oxygen_diffusion
-	5000.0,	... fixed_bottom_methane
+	6000.0,	... fixed_bottom_methane
 	2.0,	... t_max
 	0.1,	... fe_precipitation
 	1.0,	... diff_const_comp

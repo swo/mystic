@@ -4,7 +4,7 @@
 % include the primary matlab scripts
 addpath('../bin');
 
-run_it = 0; % run the simulation again?
+run_it = 1; % run the simulation again?
 
 show_concs = 1; % show the concentrations?
 show_c = 1; % show the carbon species?
@@ -13,7 +13,7 @@ show_rates = 1; % show the rates data?
 
 save_data = 1;  % save the time, rate, and concs data?
 
-show_time = 75;
+show_time = 100;
 
 clf;
 
