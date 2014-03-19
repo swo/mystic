@@ -196,8 +196,9 @@ function [conc_fluxes] = flux(~, concs_vector)
     conc_fluxes(1, s('CH4')) = conc_fluxes(1, s('CH4')) + methane_source;
 
     % apply the methane source at the bottom of the lake
-    methane_source = fixed_methane_diffusion * (fixed_bottom_methane_level - concs(n_x, s('CH4')));
-    conc_fluxes(n_x, s('CH4')) = conc_fluxes(n_x, s('CH4')) + methane_source;
+    %methane_source = fixed_methane_diffusion * (fixed_bottom_methane_level - concs(n_x, s('CH4')));
+    %conc_fluxes(n_x, s('CH4')) = conc_fluxes(n_x, s('CH4')) + methane_source;
+    conc_fluxes(n_x, s('CH4')) = conc_fluxes(n_x, s('CH4')) + FIXED_BOTTOM_METHANE;
     
     for x = 1: n_x
         [ma_op_rates, po_carbon_rate, tea_rates] = rates(concs(x, :));
