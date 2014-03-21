@@ -5,7 +5,7 @@
 	75000.0,	... fixed_carbon_level
 	1.7e4,	... fixed_oxygen_level
 	0.0,	... fixed_oxygen_diffusion
-	730.0,	... fixed_bottom_methane
+	1500.0,	... fixed_bottom_methane
 	2.0,	... t_max
 	0.1,	... fe_precipitation
 	1.0,	... diff_const_comp
