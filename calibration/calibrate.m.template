@@ -7,6 +7,10 @@ start_params = [__INITIAL_VARIED_VALUES__];
 % specify the objective function to be used
 method = __METHOD__;
 
+% get the species map
+addpath('../bin');
+s = species_map();
+
 % set some internal parameters
 log_fn = 'log/log.txt';
 param_precision = 10;
@@ -29,10 +33,10 @@ real_rates_shapes = normc(real_rates);
 
 function [] = log_time(n)
     now_clock = clock;
-    s = sprintf('step %i @ %s %i:%i', n, date, now_clock(4), now_clock(5));
+    step_string = sprintf('step %i @ %s %i:%i', n, date, now_clock(4), now_clock(5));
 
     fh = fopen(log_fn, 'a');
-    fprintf(fh, '%s\n', s);
+    fprintf(fh, '%s\n', step_string);
     fclose(fh);
 end
 
@@ -83,6 +87,13 @@ function [d] = objective_f(params)
 
         d = horzcat(final_concs_shapes - real_concs_shapes, final_rates_shapes - real_rates_shapes);
         o = sum(d(:) .^ 2);
+    elseif strcmp(method, 'boundary')
+        % just compare the relevant boundary conditions
+        theor = [75 0 80 0 0 200];
+        obs = [final_concs(1, s('O')) final_concs(end, s('O')) final_concs(1, s('N+')) final_concs(end, s('N+')) ...
+            final_concs(1, s('CH4')) final_concs(end, s('CH4'))];
+        d = theor - obs;
+        o = sum(d(:) .^ 2);
     end
 
     % report a function value to the log
@@ -96,12 +107,13 @@ end
 fh = fopen(log_fn, 'w');
 fprintf(fh, 'starting calibration...\n');
 fclose(fh);
-log_time(step);
 
 % run the simulation. use list of lower and upper bounds from config file
 if strcmp(method, 'conc')
     [final_params, fval, exitflag, output] = fmincon(@objective_f, start_params, [], [], [], [], [__LBS__], [__UBS__]);
 elseif strcmp(method, 'otu')
+    [final_params, fval, residual, exitflag, output] = lsqnonlin(@objective_f, start_params, [__LBS__], [__UBS__]);
+elseif strcmp(method, 'boundary')
     [final_params, fval, residual, exitflag, output] = lsqnonlin(@objective_f, start_params, [__LBS__], [__UBS__]);
 end
 
