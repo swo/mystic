@@ -2,18 +2,18 @@
 	0.0,	... oxygen_bubble_rate
 	20.0,	... nitrogen_source
 	0.1,	... nitrogen_ratio
-	75000.0,	... carbon_source
-	1.7e4,	... oxygen_source
+	1.0e5,	... carbon_source
+	1.5e4,	... oxygen_source
 	1500.0,	... methane_source
-	2.0,	... t_max
+	1.0,	... t_max
 	0.1,	... fe_precipitation
 	1.0,	... diff_const_comp
-	10.0,	... ma_op_o_fe_rate_const
+	100.0,	... ma_op_o_fe_rate_const
 	5.0,	... ma_op_o_n_rate_const
 	0.16,	... ma_op_o_s_rate_const
 	0.01,	... ma_op_fe_n_rate_const
-	10000.0,	... ma_op_ch4_o_rate_const
-	0.1,	... ma_op_ch4_s_rate_const
+	1000.0,	... ma_op_ch4_o_rate_const
+	0.000,	... ma_op_ch4_s_rate_const
 	1,	... primary_ox_rate_const
 	20.0,	... c_lim_o
 	5.0,	... c_lim_n
@@ -25,6 +25,6 @@
 	1.0,	... pm_ratio_n
 	60.0,	... concs0_fetot
 	1.0,	... pm_ratio_fe
-	240.0,	... concs0_stot
+	200.0,	... concs0_stot
 	1.0	... pm_ratio_s
 );
