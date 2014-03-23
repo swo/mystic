@@ -2,8 +2,8 @@
 	0.0,	... oxygen_bubble_rate
 	0.0,	... nitrogen_source
 	0.1,	... nitrogen_ratio
-	4.2e4,	... carbon_source
-	0.7e4,	... oxygen_source
+	4.7e4,	... carbon_source
+	0.9e4,	... oxygen_source
 	1500.0,	... methane_source
 	2.0,	... t_max
 	0.1,	... fe_precipitation
