@@ -1,29 +1,14 @@
-function [time_slices, concs_history, rates_history] = lake(NITROGEN_RATIO, CARBON_RATIO, FIXED_OXYGEN_LEVEL, FIXED_OXYGEN_DIFFUSION, FIXED_BOTTOM_METHANE, T_MAX, FE_PRECIPITATION, DIFF_CONST_COMP, MA_OP_O_FE_RATE_CONST, MA_OP_O_N_RATE_CONST, MA_OP_O_S_RATE_CONST, MA_OP_FE_N_RATE_CONST, MA_OP_CH4_O_RATE_CONST, MA_OP_CH4_S_RATE_CONST, PRIMARY_OX_RATE_CONST, C_LIM_O, C_LIM_N, C_LIM_FE, C_LIM_S, CONCS0_C, CONCS0_O, CONCS0_NTOT, PM_RATIO_N, CONCS0_FETOT, PM_RATIO_FE, CONCS0_STOT, PM_RATIO_S)
+function [time_slices, concs_history, rates_history] = lake(oxygen_bubble_rate, nitrogen_source, nitrogen_ratio, carbon_source, oxygen_source, methane_source, t_max, fe_precipitation, carbon_precipitation, diffusion_constant, ma_op_o_fe_rate_const, ma_op_o_n_rate_const, ma_op_o_s_rate_const, ma_op_fe_n_rate_const, ma_op_ch4_o_rate_const, ma_op_ch4_s_rate_const, primary_ox_rate_const, c_lim_o, c_lim_n, c_lim_fe, c_lim_s, concs0_c, concs0_o, concs0_ntot, pm_ratio_n, concs0_fetot, pm_ratio_fe, concs0_stot, pm_ratio_s)
+
 %% Constants
 % These are constants that make assertions about the actual system
-
-nitrogen_ratio = NITROGEN_RATIO;  % N- released per C degraded, 0.15 from Redfield
-carbon_ratio = CARBON_RATIO; % C dumped per O dumped
-
-diffusion_constant_per_compartment2 = DIFF_CONST_COMP; % input diffusion constant
-fixed_oxygen_level = FIXED_OXYGEN_LEVEL;  % oxygen level at thermocline
-fixed_oxygen_diffusion = FIXED_OXYGEN_DIFFUSION;   % diffusion from oxygen above the thermocline
-
 fixed_top_methane_level = 0.0;
-fixed_bottom_methane_level = FIXED_BOTTOM_METHANE;
-fixed_methane_diffusion = fixed_oxygen_diffusion;
 
 %% Simulation parameters
 % These are constants that affect the simulation but do not make
 % assertions about the actual system.
-
 n_x = 17;   % number of compartments
-t_max = T_MAX;   % time until end of simulation (yrs)
 n_time_slices = 100;
-
-% compute the diffusion constant, which is dependent on the length scale,
-% which depends on the square of the number of compartments
-diffusion_constant = diffusion_constant_per_compartment2 * n_x ^ 2;
 
 %% Species map
 % import the species list using the separate function file:
@@ -36,7 +21,8 @@ diffusion_constant = diffusion_constant_per_compartment2 * n_x ^ 2;
 % and down; +0.1 means a molecule is 10% as likely to go down as to go up;
 % -0.1 means 10% more likley to go up than down
 precipitation_constant_input = [
-    s('Fe+'), FE_PRECIPITATION
+    s('Fe+'), fe_precipitation
+    s('C'), fe_precipitation
 ];
 
 %% Reaction constants
@@ -50,28 +36,24 @@ ma_op_rxns = [
     % aA + bB -> cC (columns: a, A, b, B, c, C, rate constant)
     % constants k_i are from HWvC
     % units: [rates] = uM-1 yr-1
-    0.25, s('O'), 1, s('Fe-'), 1, s('Fe+'), MA_OP_O_FE_RATE_CONST    % k_2^sr = 1e7 M-1 yr-1
-    2, s('O'), 1, s('N-'), 1, s('N+'), MA_OP_O_N_RATE_CONST   % k_4^sr = 5e6 M-1 yr-1
-    2, s('O'), 1, s('S-'), 1, s('S+'), MA_OP_O_S_RATE_CONST  % k_5^sr = 1.6e5 M-1 yr-1
-    5, s('Fe-'), 1, s('N+'), 5, s('Fe+'), MA_OP_FE_N_RATE_CONST   % swo> my guess
-    1, s('CH4'), 2, s('O'), 1, s('null'), MA_OP_CH4_O_RATE_CONST    % k_9^sr = 1e10 M-1 yr-1
-    1, s('CH4'), 1, s('S+'), 1, s('S-'), MA_OP_CH4_S_RATE_CONST    % k_10^sr = 1e5 M-1 yr-1
+    0.25 s('O')      1   s('Fe-')    1   s('Fe+')    ma_op_o_fe_rate_const   % k_2^sr = 1e7 M-1 yr-1
+    2    s('O')      1   s('N-')     1   s('N+')     ma_op_o_n_rate_const    % k_4^sr = 5e6 M-1 yr-1
+    2    s('O')      1   s('S-')     1   s('S+')     ma_op_o_s_rate_const    % k_5^sr = 1.6e5 M-1 yr-1
+    5    s('Fe-')    1   s('N+')     5   s('Fe+')    ma_op_fe_n_rate_const   % swo> my guess
+    1    s('CH4')    2   s('O')      1   s('null')   ma_op_ch4_o_rate_const  % k_9^sr = 1e10 M-1 yr-1
+    1    s('CH4')    1   s('S+')     1   s('S-')     ma_op_ch4_s_rate_const  % k_10^sr = 1e5 M-1 yr-1
 ];
 [n_ma_op_rxns, ~] = size(ma_op_rxns);
-
-% primary oxidation reactions
-% primary oxidation rate constant (po_rc): HWvC report 3e-5 to 3e1 yr-1
-po_rc = PRIMARY_OX_RATE_CONST;
 
 % primary oxidation terminal electron acceptors (po_teas)
 po_teas = [
     % columns: in species, out species, c_lim, # electrons (e_j)
     % units: [c_lim] = uM
-    s('O'), s('null'), C_LIM_O, 4  % HWcV O2_lim=20; output is water
-    s('N+'), s('null'), C_LIM_N, 5  % 5; output is N2
-    s('Fe+'), s('Fe-'), C_LIM_FE, 1 % 0.1; had to adjust from HWvC on account of units (60.0)
-    s('S+'), s('S-'), C_LIM_S, 8 % note HWvC have 0.03 mM (= 30 uM)
-    s('null'), s('CH4'), 0.0, 8 % output is methane
+    s('O')    s('null')  c_lim_o     4 % HWcV O2_lim=20; output is water
+    s('N+')   s('null')  c_lim_n     5 % 5; output is N2
+    s('Fe+')  s('Fe-')   c_lim_fe    1 % 0.1; had to adjust from HWvC on account of units (60.0)
+    s('S+')   s('S-')    c_lim_s     8 % note HWvC have 0.03 mM (= 30 uM)
+    s('null') s('CH4')   0.0         8 % output is methane
 ];
 [n_po_teas, ~] = size(po_teas);
 
@@ -80,26 +62,20 @@ po_teas = [
 % metabolites not mentioned have concentration 0
 concs0 = zeros(n_x, n_species);
 
-concs0(:, s('C')) = CONCS0_C;
-concs0(:, s('O')) = CONCS0_O;
+concs0(:, s('C')) = concs0_c;
+concs0(:, s('O')) = concs0_o;
 
 %Start with an initial conc of N (CONCS0_NTOT) and a ratio of plus to minus PM_RATIO_N
-CONCS0_NPLUS = CONCS0_NTOT/(1 + (1/PM_RATIO_N));
-CONCS0_NMINUS = CONCS0_NTOT/(PM_RATIO_N + 1);
-concs0(:, s('N+')) = CONCS0_NPLUS;
-concs0(:, s('N-')) = CONCS0_NMINUS;
+concs0(:, s('N+')) = concs0_ntot / (1.0 + (1.0 / pm_ratio_n));
+concs0(:, s('N-')) = concs0_ntot - concs0(:, s('N+'));
 
 %Start with an initial conc of FE (CONCS0_FETOT) and a ratio of plus to minus PM_RATIO_FE
-CONCS0_FEPLUS = CONCS0_FETOT/(1 + (1/PM_RATIO_FE));
-CONCS0_FEMINUS = CONCS0_FETOT/(PM_RATIO_FE + 1);
-concs0(:, s('Fe+')) = CONCS0_FEPLUS;
-concs0(:, s('Fe-')) = CONCS0_FEMINUS;
+concs0(:, s('Fe+')) = concs0_fetot / (1.0 + (1.0 / pm_ratio_fe));
+concs0(:, s('Fe-')) = concs0_fetot - concs0(:, s('Fe+'));
 
 %Start with an initial conc of S (CONCS0_STOT) and a ratio of plus to minus PM_RATIO_S
-CONCS0_SPLUS = CONCS0_STOT/(1 + (1/PM_RATIO_S));
-CONCS0_SMINUS = CONCS0_STOT/(PM_RATIO_S + 1);
-concs0(:, s('S+')) = CONCS0_SPLUS;
-concs0(:, s('S-')) = CONCS0_SMINUS;
+concs0(:, s('S+')) = concs0_stot / (1.0 + (1.0 / pm_ratio_s));
+concs0(:, s('S-')) = concs0_stot - concs0(:, s('S+'));
 
 
 %% Internal parameters
@@ -159,7 +135,7 @@ function [ma_op_rates, po_carbon_rate, tea_rates] = rates(concs_row)
     f(end) = 1.0 - sum(f);
 
     % weight each TEA fraction by their # electrons
-    po_carbon_rate = po_rc * concs_row(s('C'));
+    po_carbon_rate = primary_ox_rate_const * concs_row(s('C'));
     tea_rates = po_carbon_rate * f ./ po_tea_e;
 end
 
@@ -174,19 +150,15 @@ function [conc_fluxes] = flux(~, concs_vector)
     concs = reshape(concs_vector, [n_x, n_species]);
 
     conc_fluxes = zeros(n_x, n_species);
-    
-    % apply the fixed oxygen term
-    oxygen_source = fixed_oxygen_diffusion * (fixed_oxygen_level - concs(1, s('O')));
-    conc_fluxes(1, s('O')) = conc_fluxes(1, s('O')) + oxygen_source;
-    conc_fluxes(1, s('C')) = conc_fluxes(1, s('C')) + carbon_ratio * oxygen_source;
-    
-    % apply the fixed methane level at the thermocline
-    methane_source = fixed_methane_diffusion * (fixed_top_methane_level - concs(1, s('CH4')));
-    conc_fluxes(1, s('CH4')) = conc_fluxes(1, s('CH4')) + methane_source;
 
-    % apply the methane source at the bottom of the lake
-    methane_source = fixed_methane_diffusion * (fixed_bottom_methane_level - concs(n_x, s('CH4')));
-    conc_fluxes(n_x, s('CH4')) = conc_fluxes(n_x, s('CH4')) + methane_source;
+    % apply the oxygen bubbles
+    conc_fluxes(:, s('O')) = conc_fluxes(:, s('O')) + oxygen_bubble_rate;
+
+    % apply the fixed source terms
+    conc_fluxes(1, s('O')) = conc_fluxes(1, s('O')) + oxygen_source;
+    conc_fluxes(1, s('C')) = conc_fluxes(1, s('C')) + carbon_source;
+    conc_fluxes(1, s('N+')) = conc_fluxes(1, s('N+')) + nitrogen_source;
+    conc_fluxes(end, s('CH4')) = conc_fluxes(end, s('CH4')) + methane_source;
     
     for x = 1: n_x
         [ma_op_rates, po_carbon_rate, tea_rates] = rates(concs(x, :));
