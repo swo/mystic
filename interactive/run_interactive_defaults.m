@@ -2,13 +2,14 @@
 	0.0,	... oxygen_bubble_rate
 	0.0,	... nitrogen_source
 	0.1,	... nitrogen_ratio
-	4.7e4,	... carbon_source
-	0.9e4,	... oxygen_source
+	4.5e4,	... carbon_source
+	0.5e4,	... oxygen_source
 	1500.0,	... methane_source
-	2.0,	... t_max
-	0.1,	... fe_precipitation
+	1.0,	... t_max
+	0.3,	... fe_precipitation
+    0.1,    ... carbon precip
 	50.0,	... diffusion_constant
-	10.0,	... ma_op_o_fe_rate_const
+	1.0e4,	... ma_op_o_fe_rate_const
 	5.0,	... ma_op_o_n_rate_const
 	0.16,	... ma_op_o_s_rate_const
 	0.01,	... ma_op_fe_n_rate_const
