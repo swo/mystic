@@ -22,7 +22,7 @@ n_time_slices = 100;
 % -0.1 means 10% more likley to go up than down
 precipitation_constant_input = [
     s('Fe+'), fe_precipitation
-    s('C'), fe_precipitation
+    s('C'), carbon_precipitation
 ];
 
 %% Reaction constants
