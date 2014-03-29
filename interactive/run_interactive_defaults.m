@@ -7,7 +7,7 @@
 	1500.0,	... methane_source
 	1.0,	... t_max
 	0.3,	... fe_precipitation
-    0.1,    ... carbon precip
+    0.3,    ... carbon precip
 	50.0,	... diffusion_constant
 	1.0e4,	... ma_op_o_fe_rate_const
 	5.0,	... ma_op_o_n_rate_const
