@@ -11,6 +11,9 @@
 
 \begin{document}
 
+\chapter{Clustering}
+
+\chapter{Biogeochemical model}
 \section{Model scope}
 We developed a quantiative, conceptual model of the microbiology and geochemistry in Mystic Lake's
 hypolimnion to compare against the observed data. We expected that the model would confirm
@@ -51,7 +54,7 @@ designation & name  & representative compounds \\
 \midrule
 O   & dissolved oxygen    & O$_2$ \\
 C   & oxidizable carbon & cyanobacteria biomass, glucose, acetate \\
-N$^+$ & oxidized nitrogen &  nitrate, nitrite) \\
+N$^+$ & oxidized nitrogen &  nitrate, nitrite \\
 N$^-$ & reduced nitrogen  & ammonia \\
 Fe$^+$ &  oxidized iron  & Fe(III) compounds  \\
 Fe$^-$ &  reduced iron  & Fe(II)  \\
@@ -238,8 +241,18 @@ $N$     & 17    \\
 \end{table}
 
 
-\section{Sensitivity}
-Need some results here...
+\section{Sensitivity analysis}
+We analyzed the sensitivity of the shape of each rate profile to local perturbations in each parameter using the following steps:
+
+\begin{enumerate}
+\item Vary each parameter one-at-a-time from its original value $x$ to five values between and including $0.99x$ and $1.01x$.
+\item For each value of the varied parameter,simulate the rates profiles. This produces an simulated rate for each metabolism in each compartment.
+\item Fit each rate profile with a cubic interpolation. This produces rate profiles that are defined at non-integer depths.
+\item Compute three depths to characterize the rate profile: the depth where the rate is maximized and the (up to) two depths where the rate falls to one-half its maximum value. (If the maximum is at the metalimnion or sediment, then there is only one half-maximum depth.)
+\item The sensitivity of the position of each of these characteristic depths to the varied parameter is the slope of the best-fit line of depth against parameter value.
+\end{enumerate}
+
+The sensitivities are reported in Table ??.
 
 \bibliographystyle{plain}
 \bibliography{refs}
