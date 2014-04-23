@@ -77,7 +77,7 @@ for param_i, param_name in enumerate(params):
 
     # do the linear regressions
     for rate_i, rate_name in enumerate(rate_names):
-        for metric_i in [0, 1, 2]:
+        for metric_i in range(n_readouts):
             #swo> here's where you pick whether to make the x values based on the actual
             # values of the parameter or just based on the percentage positions
             #my_slope = slope(param_vals, single_values[rate_i, :, metric_i])
