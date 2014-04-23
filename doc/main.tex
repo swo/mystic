@@ -11,7 +11,28 @@
 
 \begin{document}
 
-\chapter{Clustering}
+\chapter{Forming OEUs}
+\section{Overview}
+OTUs were clustered into OEUs in three steps: filtering, agglomeration, and quality control. OEUs consist of abundant OTUs with similar abundance profiles across depth, computed using the following steps:
+
+\begin{enumerate}
+\item Remove lowly-abundant OTUs from analysis.
+\item Compute a matrix of divergences between remaining OTUs. 
+\item Agglomerate OTUs into clusters with unsupervised clustering.
+\item Prune clusters by removing OTUs that do not meet quality thresholds.
+\end{enumerate}
+
+\section{Specific method}
+We removed OTUs with fewer than 2000 reads and/or that appeared in fewer than 2 samples. Of $\mathord{\sim} 11800$ original OTUs and 6.7 million total reads, 319 OTUs and 6.0 million reads continued into the downstream analysis.
+
+We computed the relative abundance of each OTU in every sample (i.e., normalized within each sample) and then created abundance profiles for each OTU (i.e., normalized across samples for an OTU). The abundance profile for each OTU across depths sums to unity. The divergence between two OTUs was defined as the Euclidean distance between their abundance profiles. OTUs with similar distributions across depths have low divergences regardless of their overall abundance.
+
+We created a hierarchical clustering of OTUs using the divergence matrix via Ward's method (implemented in the {\tt hclust} command in the R statistical computing language). Clusters were formed by cutting the tree at a height that produces a user-selected number of clusters. Higher numbers of clusters produced more numerous, smaller, tighter OTUs; lower numbers produced larger clusters. We selected 50 clusters as a trade-off between cluster quality and larger, more interesting clusters.
+
+We pruned clusters by computing the Pearson correlation between all OTUs in a cluster. If the cluster with the lowest mean correlation fell below 0.75, it was removed from the cluster. This process was repeated until the lowest mean correlation  was above 0.75 or the cluster was pruned to a single OTU.
+
+The remaining clusters were designated as OEUs. 283 OTUs representing 5.5 million reads were included in the OEUs, representing 88\% of the original OTUs and 82\% of the total original reads.
+
 
 \chapter{Biogeochemical model}
 \section{Model scope}
@@ -103,12 +124,7 @@ movement of the thermocline up the water column in spring and the breakdown of
 stratification in fall.
 
 \subsection{Transport: Diffusion and precipitation}
-Most chemical species are treated as dissolved in the water column. In the time and length
-scales relevant to the hypolimnion ecosystem, molecular diffusion is slow compared to bulk
-transport processes like vertical eddy diffusion. To model these bulk transport processes, most chemical species
-are transported by
-simple diffusion with rate $D \left(X_{i-1} - X_i\right) + D \left(X_{i+1} - X_i \right)$, where the diffusion
-constant $D$ is the same for all chemical species, since it represents a bulk transport process. To account for the boundaries at the metalimnion and sediment, the first term is excluded in the uppermost simulation compartment; in the lowermost compartment, the second is excluded.
+Most chemical species are treated as dissolved in the water column. In the time and length scales relevant to the hypolimnion ecosystem, molecular diffusion is slow compared to bulk transport processes like vertical eddy diffusion. To model these bulk transport processes, most chemical species are transported by simple diffusion with rate $D \left(X_{i-1} - X_i\right) + D \left(X_{i+1} - X_i \right)$, where the diffusion constant $D$ is the same for all chemical species, since it represents a bulk transport process. To account for the boundaries at the metalimnion and sediment, the first term is excluded in the uppermost simulation compartment; in the lowermost compartment, the second is excluded.
 
 To simulate the precipitation of particulate carbon and oxidized iron species, Fe$^+$ and C precipitate in the model. A parameter $p$, where $0 < p < 1$,
 determines the balance between vertical eddy diffusion and precipitation for these chemical species so that
@@ -176,8 +192,8 @@ methanogenesis.}
 \toprule
 Primary oxidations  & rate \\
 \midrule
-$\m{C} \rightarrow a \m{N}^- + b \m{e}^-$   & $R^\m{C}$ & primary oxidation half-reaction \\
-$\m{O}^+ \to \varnothing$    &   $R_1$   & aerobic heterotrophy \\
+$\m{C} \rightarrow a \m{N}^- + e \m{e}^-$   & $R^\m{C}$ & primary oxidation half-reaction \\
+$\m{O} \to \varnothing$    &   $R_1$   & aerobic heterotrophy \\
 $\m{N}^+ \to \varnothing$    &   $R_2$   & denitrification \\
 $\m{Fe}^+ \to \m{Fe}^-$ & $R_3$ & iron reduction  \\
 $\m{S}^+ \to \m{S}^-$ & $R_4$ & sulfate reduction  \\
@@ -213,7 +229,7 @@ transformation of substrates $S_1, S_2$ into a product $P$ according to $a_1 S_1
 \end{align}
 with rate constant $k$. As per Hunter et al., we do not adjust the rate according to the reaction's stoichiometry.
 
-Primary and second oxidations are listed in \ref{tab:reactions}.
+Primary and second oxidations are listed in Table \ref{tab:reactions}.
 
 \subsection{Source terms}
 Interactions between the hypolimnion and the outside world are modeled by simple source terms. Oxygen and carbon are added at the thermocline. Methane can be produced by primary oxidation in the water column, but methanogenesis also proceeds in the sediment, where it is transported upward and consumed by methanotrophy. We model this process by a point source of methane in the sediment.
@@ -240,19 +256,25 @@ $N$     & 17    \\
 \caption{Parameter values and sources.}
 \end{table}
 
+\section{Implementation}
+The model was implemented in Matlab, and the ODE solutions were computed using the command {\tt ode15s} with all chemical species restricted to nonnegative values (command {\tt odeset}).
 
 \section{Sensitivity analysis}
+\subsection{Procedure}
 We analyzed the sensitivity of the shape of each rate profile to local perturbations in each parameter using the following steps:
 
 \begin{enumerate}
 \item Vary each parameter one-at-a-time from its original value $x$ to five values between and including $0.99x$ and $1.01x$.
-\item For each value of the varied parameter,simulate the rates profiles. This produces an simulated rate for each metabolism in each compartment.
-\item Fit each rate profile with a cubic interpolation. This produces rate profiles that are defined at non-integer depths.
+\item For each value of the varied parameter, simulate the rates profiles. This produces an simulated rate for each metabolism in each compartment.
+\item Fit each rate profile with a cubic interpolation (using the {\tt intrep1d} command in the scientific computing package SciPy for the Python programming language). This produces rate profiles that are defined at non-integer depths.
 \item Compute three depths to characterize the rate profile: the depth where the rate is maximized and the (up to) two depths where the rate falls to one-half its maximum value. (If the maximum is at the metalimnion or sediment, then there is only one half-maximum depth.)
 \item The sensitivity of the position of each of these characteristic depths to the varied parameter is the slope of the best-fit line of depth against parameter value.
 \end{enumerate}
 
+\subsection{Results \& Discussion}
 The sensitivities are reported in Table ??.
+
+This sensitivity analysis is purely local. It does not treat the possibility that markedly different parameterizations could yield similar results.
 
 \bibliographystyle{plain}
 \bibliography{refs}
