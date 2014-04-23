@@ -15,10 +15,10 @@ template = """function [] = get_rates({0})
 [time_slices, concs_history, rates_history] = lake({1});
 
 final_rates = squeeze(rates_history(end, :, :));
-dlmwrite(rates_out_fn, final_rates, precision=15);
+dlmwrite(rates_out_fn, final_rates, 'precision', 15);
 
 final_concs = squeeze(concs_history(end, :, :));
-dlmwrite(concs_out_fn, final_concs, precision=15);
+dlmwrite(concs_out_fn, final_concs, 'precision', 15);
 
 end"""
 
