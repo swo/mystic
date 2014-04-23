@@ -12,8 +12,11 @@ import scipy.interpolate, scipy.stats
 
 n_vals = 5
 
+n_readouts = 4
+readout_names = ['LHM', 'maxX', 'UHM', 'maxV']
+
 def get_single_values(x, y):
-    '''give interpolated x positions of half max's, max'''
+    '''get the value at the max'''
 
     f = scipy.interpolate.interp1d(x, y, kind='cubic')
 
@@ -28,13 +31,13 @@ def get_single_values(x, y):
     # find the upper and lower half-max
     if np.max(new_y) - np.min(new_y) == 0:
         # escape hatch
-        return [0, 0, 0]
+        return [0, 0, 0, max(y)]
     else:
         above_hm = new_x[new_y > (np.max(new_y) - np.min(new_y)) / 2]
         uhm = np.max(above_hm)
         lhm = np.min(above_hm)
 
-        return [lhm, max_x, uhm]
+        return [lhm, max_x, uhm, max(y)]
 
 slope = lambda x, y: scipy.stats.linregress(x, y)[0]
 slopes = lambda x, ys: [slope(x, y) for y in ys]
@@ -60,7 +63,7 @@ for param_i, param_name in enumerate(params):
 
     # loop over values of the parameter
     # initialize single values output
-    single_values = np.empty((len(rate_names), len(param_vals), 3))
+    single_values = np.empty((len(rate_names), len(param_vals), n_readouts))
     for val_i, param_val in enumerate(param_vals):
         # get the data
         fn = conf.get('Sensitivity analysis', 'analysis_rates_fn_mask').format(param_i, val_i)
@@ -88,7 +91,7 @@ for param_i, param_name in enumerate(params):
 with open('out.csv', 'w') as f:
     w = csv.writer(f)
 
-    header = ['rate'] + ['{0}_{1}'.format(rate_name, pos_name) for rate_name in rate_names for pos_name in ['LHM', 'max', 'UHM']]
+    header = ['rate'] + ['{0}_{1}'.format(rate_name, pos_name) for rate_name in rate_names for pos_name in readout_names]
     w.writerow(header)
 
     for param_name, row in zip(params, out_rows):
