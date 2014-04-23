@@ -9,3 +9,14 @@ old/*
 *.bak
 *.xlsx
 *.txt
+*.mat
+*.aux
+*.bbl
+*.blg
+*.dvi
+*.fdb_latexmk
+*.fls
+*.log
+*.gz
+tmp
+calibrations/calibrate.m
