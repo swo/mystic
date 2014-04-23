@@ -1,6 +1,21 @@
 #!/usr/bin/env python
 
-import numpy as np, re, csv, itertools, ConfigParser
+import numpy as np, re, csv, itertools, ConfigParser, os, os.path
+
+# make sure our destination folders exist
+target_dirs = ['maps', 'data', 'submit_scripts']
+tests = [os.path.isdir(target) for target in target_dirs]
+failed_dirs = [target for test, target in zip(tests, target_dirs) if test == False]
+if len(failed_dirs) > 0:
+    print "output directory(s) not found: " + " ".join(failed_dirs)
+    yn = raw_input("do you want me to make them for you? [y|n] ")
+    if yn.lower() == 'y':
+        # make the folders
+        for target in failed_dirs:
+            os.mkdir(target)
+        print "ok, i did that for you"
+    else:
+        raise RuntimeError("output directory missing")
 
 # open the configuration file
 conf = ConfigParser.ConfigParser()
