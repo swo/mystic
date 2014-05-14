@@ -1,3 +1,7 @@
+% make_plots.m
+% This script loads up the concentration and rate data from the last
+% interactive run and plots each one on its own profile.
+
 % load up the data
 load('history.mat')
 conc_names = textread('conc_names.txt', '%s', 'delimiter', '\n');

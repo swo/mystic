@@ -13,3 +13,11 @@
   some default values from which to generate scripts for the various tools.
 - set\_matlab\_path.sh: Convenience tool for setting the matlab path when running scripts
   from the terminal.
+
+# Usage
+
+You should be able to run the sensitivity analysis in parallel. For running on 20 nodes on coyote,
+
+```
+cat submit_0.sh | ssub -n 20
+```
