@@ -20,9 +20,9 @@ set(gca, 'YTick', [0.5, 5, 10, 15]);
 set(gca, 'YTickLabel', {'5', '10', '15', '20'});
 
 L = get(cb, 'YLim');
-ticks = linspace(L(1), L(2), 4);
+ticks = linspace(L(1), L(2), 3);
 set(cb, 'YTick', ticks);
-set(cb, 'YTickLabel', floor(ticks));
+set(cb, 'YTickLabel', max(0, floor(ticks)));
 
 print(fn, '-dpdf');
 
