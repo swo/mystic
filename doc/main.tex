@@ -11,44 +11,9 @@
 
 \begin{document}
 
-\chapter{Forming OEUs}
-\section{Overview}
-OTUs were clustered into OEUs in three steps: filtering, agglomeration, and quality control. OEUs consist of abundant OTUs with similar abundance profiles across depth, computed using the following steps:
-
-\begin{enumerate}
-\item Remove lowly-abundant OTUs from analysis.
-\item Compute a matrix of divergences between remaining OTUs. 
-\item Agglomerate OTUs into clusters with unsupervised clustering.
-\item Prune clusters by removing OTUs that do not meet quality thresholds.
-\end{enumerate}
-
-\section{Specific method}
-We removed OTUs with fewer than 2000 reads and/or that appeared in fewer than 2 samples. Of $\mathord{\sim} 11800$ original OTUs and 6.7 million total reads, 319 OTUs and 6.0 million reads continued into the downstream analysis.
-
-We computed the relative abundance of each OTU in every sample (i.e., normalized within each sample) and then created abundance profiles for each OTU (i.e., normalized across samples for an OTU). The abundance profile for each OTU across depths sums to unity. The divergence between two OTUs was defined as the Euclidean distance between their abundance profiles. OTUs with similar distributions across depths have low divergences regardless of their overall abundance.
-
-We created a hierarchical clustering of OTUs using the divergence matrix via Ward's method (implemented in the {\tt hclust} command in the R statistical computing language). Clusters were formed by cutting the tree at a height that produces a user-selected number of clusters. Higher numbers of clusters produced more numerous, smaller, tighter OTUs; lower numbers produced larger clusters. We selected 50 clusters as a trade-off between cluster quality and larger, more interesting clusters.
-
-We pruned clusters by computing the Pearson correlation between all OTUs in a cluster. If the cluster with the lowest mean correlation fell below 0.75, it was removed from the cluster. This process was repeated until the lowest mean correlation  was above 0.75 or the cluster was pruned to a single OTU.
-
-The remaining clusters were designated as OEUs. 283 OTUs representing 5.5 million reads were included in the OEUs, representing 88\% of the original OTUs and 82\% of the total original reads.
-
-
 \chapter{Biogeochemical model}
 \section{Model scope}
-We developed a quantiative, conceptual model of the microbiology and geochemistry in Mystic Lake's
-hypolimnion to compare against the observed data. We expected that the model would confirm
-our understanding of the basic mechanisms that lead to redox zonation and the distribution
-of specific bacterial taxa in the hypolimnion. The model is conceptual rather than operational: it
-is designed to test our understanding of general principles in community structure in
-eutrophic dimictic lakes rather than predict any particular observable from Mystic Lake with
-high accuracy.
-
-We treat the hypolimnion as a mostly closed system of cycling nutrients. Compartments are
-linked by transport processes, and reactions within compartments interconvert simulated chemical
-species. Interaction with the environment outside the hypolimnion is represented by just two
-processes: input of oxidizable carbon in the upper compartments and input of methane from
-the sediment. The sediment and metalimnion are otherwise ignored.
+We treat the hypolimnion as a mostly closed system of cycling nutrients. Compartments are linked by transport processes, and reactions within compartments interconvert simulated chemical species. Interaction with the environment outside the hypolimnion is represented by just two processes: input of oxidizable carbon in the upper compartments and input of methane from the sediment. The sediment and metalimnion are otherwise ignored.
 
 \section{Model}
 \subsection{Chemical species and reactions}
@@ -56,10 +21,7 @@ We use a simplified set of chemical species to avoid excessive parameterization 
 because we need only predict values for which we have experimental comparison. Table
 \ref{tab:chemical_species} lists all chemical species simulated.
 
-In nature, carbon is added to the hypolimnion through particulate biomass, humics from
-rainwater runoff, photosynthesis,
-etc. There are many carbon species with differing oxidation states. In this model, we 
-simulate only one species of carbon (C) that has only one oxidation state.
+In nature, carbon is added to the hypolimnion through particulate biomass, humics from rainwater runoff, photosynthesis, etc. There are many carbon species with differing oxidation states. In this model, we simulate only one species of carbon (C) that has only one oxidation state.
 
 In the model, many chemical compounds are considered abundant or unimportant to the simulated biogeochemical cycles and are therefore excluded. Carbon dioxide is considered ubiquitous and abundant. Its production and consumption are not tracked and reactions that consume
 CO$_2$ are assumed to proceed without interruption. Nitrogen gas, produced by denitrification
@@ -71,7 +33,7 @@ The pH in Mystic Lake's hypolimnion varies between about 6 and 7. We neglected e
 \centering
 \begin{tabular}{ l l l }
 \toprule
-designation & name  & representative compounds \\
+symbol & name  & representative compounds \\
 \midrule
 O   & dissolved oxygen    & O$_2$ \\
 C   & oxidizable carbon & cyanobacteria biomass, glucose, acetate \\
@@ -236,45 +198,69 @@ Interactions between the hypolimnion and the outside world are modeled by simple
 All methane in our model is consumed before reaching the thermocline, so we omit the mechanics for emission of methane into the metalimnion.
 
 \subsection{Parameterization}
-A list of parameters and their values is included somewhere around here. Most parameters
-related to the reaction rates are borrowed from Hunter et al.\cite{hunterkinetic1998}. The
-parameters related to transport, sink/source terms, and initial concentrations were drawn
-from sources as noted and adjusted by hand. 
+A list of parameters and their values is included somewhere around here. Most parameters related to the reaction rates are borrowed from Hunter et al.\cite{hunterkinetic1998}. The parameters related to transport, sink/source terms, and initial concentrations were drawn from sources where possible. Some values were adjusted by hand to match the observed data. 
 
 \begin{table}
 \centering
-\begin{tabular}{ l l l }
+\begin{tabular}{ l r l l }
 \toprule
-parameter   &   value   & source \\
+parameter & value & unit & source \\
 \midrule
-General parameters \\
-$T$     & 25 yrs  \\
-$N$     & 17    \\
+\multicolumn{4}{l}{General parameters} \\
+$T$     & 1 & yr & Asserted to set time scale \\
+$N$     & 17 & & Asserted to set compartment height to 1 m   \\
+\\
+\multicolumn{4}{l}{Primary oxidation parameters} \\
+$a$ (N:C ratio)	&	0.1	& & See below \\
+$\left[\mathrm{O}_\mathrm{lim}\right]$ & 20.0 & $\mu$M & HWcV 20.0 \\
+$\left[\mathrm{N}^+_\mathrm{lim}\right]$ & 5.0 & $\mu$M & HWcV 5.0 \\
+$\left[\mathrm{Fe}^+_\mathrm{lim}\right]$ & 0.1 & $\mu$M & HWcV 60 umol dm-3 \\
+$\left[\mathrm{S}^+_\mathrm{lim}\right]$ & 30.0 & $\mu$M & HWcV 30.0 \\
+\\
+\multicolumn{4}{l}{Secondary oxidation parameters} \\
+$k_1$ (ammonia oxidation)	& $5.0$	& $\mu$M$^{-1}$ yr$^{-1}$ & HWvC $k_{4}^\mathrm{sr} = 5.0$ \\
+$k_2$ (sulfide oxidation)	& $0.16$	& $\mu$M$^{-1}$ yr$^{-1}$ & Manually adjusted \\
+$k_3$ (iron oxidation, nitrate)	& $0.01$	& $\mu$M$^{-1}$ yr$^{-1}$ & Manually adjusted \\
+$k_4$ (methanotrophy, oxygen)	& $10^{3}$	& $\mu$M$^{-1}$ yr$^{-1}$ & $10^{4}$ ($k_{9}^\mathrm{sr}$) \cite{hunterkinetic1998} \\
+$k_5$ (methanotrophy, sulfate)	& $10^{-3}$	& $\mu$M$^{-1}$ yr$^{-1}$ & HWvC $k_{10}^\mathrm{sr} = 10^{-2}$ \\
+$k_6$ (iron oxidation) & $10^4$ & $\mu$M yr$^{-1}$ & HWvC $k_{2}^\mathrm{sr} = 10^{-1}$ \\
+\\
+\multicolumn{4}{l}{Transport parameters} \\
+$D$	&	50	&	m$^2$ yr$^{-1}$	&	See below \\
+$p_\mathrm{Fe}$	&	0.3	&	& Manually adjusted \\
+$p_\mathrm{C}$	&	0.1	&	& Manually adjusted \\
+\\
+\multicolumn{4}{l}{Source rates} \\
+$s_\mathrm{C}$	&	$4.5 \times 10^4$ & $\mu$M yr$^{-1}$	&	Manually adjusted \\
+$s_\mathrm{O}$	&	$3.5 \times 10^3$ & $\mu$M yr$^{-1}$	&	Manually adjusted \\
+$s_\mathrm{M}$	&	1500 & $\mu$M y$^{-1}$	&	See below \\
+\\
+\multicolumn{4}{l}{Initial concentrations} \\
+C	&	200 & $\mu$M \\
+O	&	50 & $\mu$M \\
+N total	&	100 & $\mu$M \\
+N ratio	&	10 & $\mu$M \\
+Fe tot	&	60 & $\mu$M \\
+Fe rat	&	10 & $\mu$M \\
+S tot	&	100 & $\mu$M \\
+S rat	&	10 & $\mu$M \\
 \bottomrule
 \end{tabular}
 \label{tab:parameters}
 \caption{Parameter values and sources.}
 \end{table}
 
+\subsubsection{N:C ratio $a$}
+USGS data for the Aberjona river gauge (citation?, which drains into Mystic Lake) for 1999-2000 has average total organic carbon 5.59 ml L$^{-1}$. Wetzel (\cite{Wetzel_2001}, Table 12-4, pg. 224) lists C:N for this carbon amount 15.1, thus N:C $= 1/15.1 = 0.066$.
+
+\subsection{Eddy diffusion constant $D$}
+Benoit and Hemond\cite{benoitvertical1996} collate reports of vertical eddy diffusion constants 0.002--0.05 cm$^2$ s$^{-1}$ for lakes with depths comparable to Mystic Lake's, corresponding to a range 6--158 m$^2$ yr$^{-1}$.
+
+\subsection{Methane source $s_\mathrm{M}$}
+Varadharajan thesis pg 202 reports 1.3--4.0 mmol m$^{-2}$ d$^{-1}$, which corresponds to 475--1460 $\mu$M yr$^{-1}$ if the methane is delivered to a well-mixed one-meter high lowest compartment as assumed in the model.
+
 \section{Implementation}
 The model was implemented in Matlab, and the ODE solutions were computed using the command {\tt ode15s} with all chemical species restricted to nonnegative values (command {\tt odeset}).
-
-\section{Sensitivity analysis}
-\subsection{Procedure}
-We analyzed the sensitivity of the shape of each rate profile to local perturbations in each parameter using the following steps:
-
-\begin{enumerate}
-\item Vary each parameter one-at-a-time from its original value $x$ to five values between and including $0.99x$ and $1.01x$.
-\item For each value of the varied parameter, simulate the rates profiles. This produces an simulated rate for each metabolism in each compartment.
-\item Fit each rate profile with a cubic interpolation (using the {\tt intrep1d} command in the scientific computing package SciPy for the Python programming language). This produces rate profiles that are defined at non-integer depths.
-\item Compute three depths to characterize the rate profile: the depth where the rate is maximized and the (up to) two depths where the rate falls to one-half its maximum value. (If the maximum is at the metalimnion or sediment, then there is only one half-maximum depth.)
-\item The sensitivity of the position of each of these characteristic depths to the varied parameter is the slope of the best-fit line of depth against parameter value.
-\end{enumerate}
-
-\subsection{Results \& Discussion}
-The sensitivities are reported in Table ??.
-
-This sensitivity analysis is purely local. It does not treat the possibility that markedly different parameterizations could yield similar results.
 
 \bibliographystyle{plain}
 \bibliography{refs}
