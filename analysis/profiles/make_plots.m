@@ -23,7 +23,7 @@ for i = 1: n_concs
     print(fn, '-dpdf');
 
     fn = sprintf('plots/time/c_%s.pdf', conc_names{i});
-    make_ts_plot(concs_history(:, :, i), fn, 5, 100);
+    make_ts_plot(concs_history(:, :, i), fn, 5, 146);
 end
 
 % make each of the rates figures
@@ -33,5 +33,5 @@ for i = 1: n_rates
     print(fn, '-dpdf');
 
     fn = sprintf('plots/time/r_%s.pdf', rate_names{i});
-    make_ts_plot(rates_history(:, :, i), fn, 5, 100);
+    make_ts_plot(rates_history(:, :, i), fn, 5, 146);
 end
